@@ -16,14 +16,14 @@ PushPlanner::PushPlanner()
     this->push_active_ = false;
 }
 
-PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_):
+PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, std_msgs::Float64MultiArray corridor_width_array_):
     private_nh("~")
 {
-    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_);
+    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_);
     
 }
 
-void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_){
+void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, std_msgs::Float64MultiArray corridor_width_array_){
     
     this->global_frame_ = global_frame_;
     this->local_frame_ = local_frame_;
@@ -41,6 +41,7 @@ void PushPlanner::initialize(string local_frame_, string global_frame_, geometry
     this->time_step_ = 1 / controller_frequency_;
     this->push_state_ = INACTIVE;
     this->goal_ = pushing_path_.poses[pushing_path_.poses.size() - 1];
+    this->corridor_width_array_ = corridor_width_array_;
     
     vis_corridor_ = nh.advertise<visualization_msgs::MarkerArray>("/push_action/push_corridor", 100, true);
     marker_target_c_ = nh.advertise<visualization_msgs::Marker>("/push_action/current_target", 100, true);

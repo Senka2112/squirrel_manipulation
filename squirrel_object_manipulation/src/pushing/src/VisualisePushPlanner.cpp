@@ -121,8 +121,15 @@ void PushPlanner::publishCorridor(){
         marker.action = visualization_msgs::Marker::MODIFY;
         marker.pose= pushing_path_.poses[i].pose;
         marker.pose.position.z= -0.1;
-        marker.scale.x = corridor_width_ ;
-        marker.scale.y = corridor_width_ ;
+        if(corridor_width_ > 0.0){
+            marker.scale.x = corridor_width_ ;
+            marker.scale.y = corridor_width_ ;
+        }
+        else {
+            //cout<<"here "<< corridor_width_array_.data[i]<<endl;
+            marker.scale.x = corridor_width_array_.data[i];
+            marker.scale.y = corridor_width_array_.data[i];
+        }
         marker.scale.z = 0.1;
         marker.color.a = 0.3;
         marker.color.r = 1.0;

@@ -35,11 +35,11 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("object_diameter", object_diameter_, 0.20);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
-    private_nh.param("clearance_nav", clearance_nav_, false);
+    private_nh.param("clearance_nav", clearance_nav_, true);
     private_nh.param("check_collisions", check_collisions_, true);
-    private_nh.param("navigation_", nav_, false);
-    private_nh.param("artag_", artag_, true);
-    private_nh.param("sim_", sim_, false);
+    private_nh.param("navigation_", nav_, true);
+    private_nh.param("artag_", artag_, false);
+    private_nh.param("sim_", sim_,true);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 4);
@@ -229,7 +229,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
     //initialize push planner
     if (runPushPlan_){
-        push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_);
+        push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_);
         push_planner_->visualisationOn();
         push_planner_->startPush();
     }
@@ -489,8 +489,15 @@ bool PushAction::getPushPath(){
         }
 
         //Get clearance
-        if(clearance_nav_){ corridor_width_ = srvPlan.response.clearance;
-            cout <<"from nav clearance"<< corridor_width_<<endl;
+        if(clearance_nav_){
+            corridor_width_ = 0.0;
+            //cout <<"from nav clearance"<< corridor_width_<<endl;
+            corridor_width_array_.data.resize(srvPlan.response.clearance.data.size());
+            for (int i; i<srvPlan.response.clearance.data.size(); i++){
+                corridor_width_array_.data[i] = srvPlan.response.clearance.data[i];
+                cout<<"value "<<i<<srvPlan.response.clearance.data[i]<<endl;
+
+            }
         }
 
         std_msgs::Bool active_msg_;
