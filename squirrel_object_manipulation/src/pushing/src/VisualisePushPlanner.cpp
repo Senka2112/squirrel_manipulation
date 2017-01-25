@@ -111,6 +111,7 @@ void PushPlanner::publishPoint(vec t){
 
 void PushPlanner::publishCorridor(){
     visualization_msgs::MarkerArray marker_array;
+
     for(size_t i = 0; i < pushing_path_.poses.size(); i++) {
         visualization_msgs::Marker marker;
         marker.header.frame_id = pushing_path_.header.frame_id;
@@ -119,16 +120,15 @@ void PushPlanner::publishCorridor(){
         marker.id = i;
         marker.type = visualization_msgs::Marker::SPHERE;
         marker.action = visualization_msgs::Marker::MODIFY;
-        marker.pose= pushing_path_.poses[i].pose;
+        marker.pose = pushing_path_.poses[i].pose;
         marker.pose.position.z= -0.1;
         if(corridor_width_ > 0.0){
             marker.scale.x = corridor_width_ ;
             marker.scale.y = corridor_width_ ;
         }
         else {
-            //cout<<"here "<< corridor_width_array_.data[i]<<endl;
-            marker.scale.x = corridor_width_array_.data[i];
-            marker.scale.y = corridor_width_array_.data[i];
+            marker.scale.x = corridor_width_array_.at(i);
+            marker.scale.y = corridor_width_array_.at(i);
         }
         marker.scale.z = 0.1;
         marker.color.a = 0.3;

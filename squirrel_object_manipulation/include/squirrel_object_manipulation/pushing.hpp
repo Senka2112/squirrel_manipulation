@@ -80,7 +80,7 @@ private:
     ros::Publisher octomap_pub_;
     ros::Publisher costmap_pub_;
     ros::Publisher active_pub_;
-    std_msgs::Float64MultiArray corridor_width_array_;
+    std::vector<double> corridor_width_array_;
 
     //robot pose update
     std::string pose_topic_;

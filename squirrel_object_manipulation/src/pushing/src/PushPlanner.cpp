@@ -16,14 +16,14 @@ PushPlanner::PushPlanner()
     this->push_active_ = false;
 }
 
-PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, std_msgs::Float64MultiArray corridor_width_array_):
+PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_):
     private_nh("~")
 {
     this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_);
     
 }
 
-void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, std_msgs::Float64MultiArray corridor_width_array_){
+void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_){
     
     this->global_frame_ = global_frame_;
     this->local_frame_ = local_frame_;
@@ -42,7 +42,7 @@ void PushPlanner::initialize(string local_frame_, string global_frame_, geometry
     this->push_state_ = INACTIVE;
     this->goal_ = pushing_path_.poses[pushing_path_.poses.size() - 1];
     this->corridor_width_array_ = corridor_width_array_;
-    
+
     vis_corridor_ = nh.advertise<visualization_msgs::MarkerArray>("/push_action/push_corridor", 100, true);
     marker_target_c_ = nh.advertise<visualization_msgs::Marker>("/push_action/current_target", 100, true);
     marker_object_c_ = nh.advertise<visualization_msgs::Marker>("/push_action/current_object_pose", 100, true);
@@ -125,7 +125,7 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
             relocate_target_(span(0,1)) = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
             relocate_target_(2) = aO2P;
             rel_ = true;
-            cout<<"here 2"<<endl;
+            //cout<<"here 2"<<endl;
         }
         
         //relocate_target_vec_(span(0,1),relocate_target_vec_.n_cols - 1) = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2);

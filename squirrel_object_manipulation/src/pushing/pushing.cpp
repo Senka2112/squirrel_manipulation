@@ -184,17 +184,17 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
     // move camera for vision
     robotino->moveTilt(tilt_perception_);
     //robotino->movePan(pan_perception_);
-        //tur on costmaps
+    //turn on costmaps
     costmap_msg_.data = true;
     costmap_pub_.publish(costmap_msg_);
     ros::spinOnce();
-    sleep (0.5);
+    sleep (2);
 
-    //activatio for navigation
+    //activation for navigation
 
     std_msgs::Bool active_msg_;
     active_msg_.data = true;
-    active_pub_.publish(active_msg_);
+    //active_pub_.publish(active_msg_);
     ros::spinOnce();
 
     if(startTracking()){
@@ -243,7 +243,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
             push_planner_->updatePushPlanner(pose_robot_, pose_object_);
             geometry_msgs::Twist cmd = push_planner_->getControlCommand();
             //cout<<cmd<<endl;
-            robotino->singleMove(cmd.linear.x, cmd.linear.y,0.0,0.0,0.0,cmd.angular.z);
+            //robotino->singleMove(cmd.linear.x, cmd.linear.y,0.0,0.0,0.0,cmd.angular.z);
 
             lRate.sleep();
 
@@ -417,7 +417,6 @@ bool PushAction::getPushPath(){
 
         squirrel_rgbd_mapping_msgs::GetPushingPlan srvPlan;
 
-        // part which has to be revised
         geometry_msgs::PoseStamped start_m;
         try {
             tfl_.waitForTransform(global_frame_, "/map", ros::Time::now(), ros::Duration(1.0));
@@ -431,6 +430,8 @@ bool PushAction::getPushPath(){
         // Getting pushing plan
         srvPlan.request.start.x =  start_m.pose.position.x;
         srvPlan.request.start.y =  start_m.pose.position.y;
+//        srvPlan.request.start.x =  pose_robot_.x;
+//        srvPlan.request.start.y =  pose_robot_.y;
         srvPlan.request.start.theta =  pose_robot_.theta;
 
         srvPlan.request.goal.x = push_goal_.pose.position.x;
@@ -491,11 +492,28 @@ bool PushAction::getPushPath(){
         //Get clearance
         if(clearance_nav_){
             corridor_width_ = 0.0;
-            //cout <<"from nav clearance"<< corridor_width_<<endl;
-            corridor_width_array_.data.resize(srvPlan.response.clearance.data.size());
-            for (int i; i<srvPlan.response.clearance.data.size(); i++){
-                corridor_width_array_.data[i] = srvPlan.response.clearance.data[i];
-                cout<<"value "<<i<<srvPlan.response.clearance.data[i]<<endl;
+
+            for (int i = 0; i<srvPlan.response.clearance.data.size(); i++){
+                if (corridor_width_array_.size() > 1){
+                    double pom = corridor_width_array_.at(corridor_width_array_.size() - 1);
+                    pom = std::max(pom, robot_diameter_ + object_diameter_);
+                    pom = (pom + srvPlan.response.clearance.data[i]) / 2;
+                    if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
+                    else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
+                    else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
+                    else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
+                    pom = 0.2;
+                    corridor_width_array_.push_back(pom);
+                }
+                double pom = srvPlan.response.clearance.data[i];
+                pom = std::max(pom, robot_diameter_ + object_diameter_);
+                if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
+                else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
+                else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
+                else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
+                pom = 0.2;
+
+                corridor_width_array_.push_back(pom);
 
             }
         }
@@ -658,11 +676,6 @@ void PushAction::finishPush(){
     costmap_pub_.publish(costmap_msg_);
     ros::spinOnce();
 
-    //turn on octomap
-    std_msgs::Bool octomap_msg_;
-    octomap_msg_.data = true;
-    octomap_pub_.publish(octomap_msg_);
-    ros::spinOnce();
     ROS_INFO("(Push) Octomaps on \n");
 
 }
