@@ -35,8 +35,8 @@ void PushPlanner::publishMarkerTargetCurrent(geometry_msgs::PoseStamped t_pose) 
     marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
     marker_target_c_.publish(marker);
 }
 
@@ -121,7 +121,7 @@ void PushPlanner::publishCorridor(){
         marker.type = visualization_msgs::Marker::SPHERE;
         marker.action = visualization_msgs::Marker::MODIFY;
         marker.pose = pushing_path_.poses[i].pose;
-        marker.pose.position.z= -0.1;
+        marker.pose.position.z= -0.25;
         if(corridor_width_ > 0.0){
             marker.scale.x = corridor_width_ ;
             marker.scale.y = corridor_width_ ;
@@ -130,7 +130,7 @@ void PushPlanner::publishCorridor(){
             marker.scale.x = corridor_width_array_.at(i);
             marker.scale.y = corridor_width_array_.at(i);
         }
-        marker.scale.z = 0.1;
+        marker.scale.z = 0.05;
         marker.color.a = 0.3;
         marker.color.r = 1.0;
         marker.color.g = 1.0;
@@ -138,6 +138,32 @@ void PushPlanner::publishCorridor(){
         marker_array.markers.push_back(marker);
     }
     vis_corridor_.publish( marker_array );
+
+    visualization_msgs::MarkerArray marker_array_object;
+
+    for(size_t i = 0; i < pushing_path_.poses.size(); i++) {
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = pushing_path_.header.frame_id;
+        marker.header.stamp = ros::Time();
+        marker.ns = "object_corridor";
+        marker.id = i;
+        marker.type = visualization_msgs::Marker::SPHERE;
+        marker.action = visualization_msgs::Marker::MODIFY;
+        marker.pose = pushing_path_.poses[i].pose;
+        marker.pose.position.z= -0.1;
+
+        marker.scale.x = corridor_object_width_array_.at(i);
+        marker.scale.y = corridor_object_width_array_.at(i);
+
+        marker.scale.z = 0.1;
+        marker.color.a = 0.3;
+        marker.color.r = 0.0;
+        marker.color.g = 1.0;
+        marker.color.b = 0.0;
+        marker_array_object.markers.push_back(marker);
+    }
+    vis_object_corridor_.publish(marker_array_object);
+
 }
 
 void PushPlanner::deleteMarkers(){
@@ -159,16 +185,25 @@ void PushPlanner::deleteMarkers(){
     marker.id = 3;
     marker_point_.publish(marker);
 
-    visualization_msgs::MarkerArray marker_array;
+    visualization_msgs::MarkerArray marker_array, marker_array_object;
     for(size_t i = 0; i < pushing_path_.poses.size(); i++) {
         marker.ns = "push_corridor";
         marker.id = i;
         marker_array.markers.push_back(marker);
+        marker.ns = "object_corridor";
+        marker_array_object.markers.push_back(marker);
+
     }
-    vis_corridor_.publish( marker_array );
+    vis_corridor_.publish( marker_array);
+    vis_object_corridor_.publish(marker_array_object);
 
     pushing_path_.poses.clear();
     pushing_plan_pub_.publish(pushing_path_);
+    pushing_edge_p_pub_.publish(pushing_path_);
+    pushing_edge_n_pub_.publish(pushing_path_);
+    object_edge_p_pub_.publish(pushing_path_);
+    object_edge_n_pub_.publish(pushing_path_);
+
 
 }
 

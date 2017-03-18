@@ -190,3 +190,12 @@ vec pointOnLineWithDistanceFromPointOuter(double x1, double y1, double x2, doubl
 
     return point;
 }
+double parallelCurveWidthTrans(double x, double dx, double y, double dy, bool sign, double w){
+
+    if (dx == 0) dx = 0.001;
+    if (dy == 0) dy = 0.001;
+    if (sign)
+        return x + w * dy / sqrt(dx * dx + dy * dy);
+    else
+        return x - w * dy / sqrt(dx * dx + dy * dy);
+}

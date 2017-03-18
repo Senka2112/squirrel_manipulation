@@ -489,33 +489,34 @@ bool PushAction::getPushPath(){
             }
         }
 
-        //Get clearance
+        //Get clearance from navigation
         if(clearance_nav_){
-            corridor_width_ = 0.0;
+            corridor_width_ = -1.0;
 
             for (int i = 0; i<srvPlan.response.clearance.data.size(); i++){
                 if (corridor_width_array_.size() > 1){
                     double pom = corridor_width_array_.at(corridor_width_array_.size() - 1);
-                    pom = std::max(pom, robot_diameter_ + object_diameter_);
+                    pom = std::max(pom, 2* (robot_diameter_ + object_diameter_));
                     pom = (pom + srvPlan.response.clearance.data[i]) / 2;
-                    if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
-                    else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
-                    else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
-                    else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
-                    pom = 0.2;
+//                    if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
+//                    else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
+//                    else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
+//                    else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
+//                    pom = 0.2;
                     corridor_width_array_.push_back(pom);
                 }
                 double pom = srvPlan.response.clearance.data[i];
-                pom = std::max(pom, robot_diameter_ + object_diameter_);
-                if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
-                else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
-                else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
-                else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
-                pom = 0.2;
+                pom = std::max(pom, 2*(robot_diameter_ + object_diameter_));
+//                if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
+//                else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
+//                else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
+//                else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
+//                pom = 0.2;
 
                 corridor_width_array_.push_back(pom);
 
             }
+
         }
 
         std_msgs::Bool active_msg_;

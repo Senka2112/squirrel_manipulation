@@ -52,6 +52,7 @@ private:
     bool rel_;
 
     ros::Publisher vis_corridor_;
+    ros::Publisher vis_object_corridor_;
     ros::Publisher marker_target_c_;
     ros::Publisher marker_object_c_;
     ros::Publisher marker_robot_c_;
@@ -67,9 +68,10 @@ protected:
 
     PushState push_state_;
     ros::NodeHandle  private_nh;
-    ros::Publisher pushing_plan_pub_;
+    ros::Publisher pushing_plan_pub_, pushing_edge_p_pub_, pushing_edge_n_pub_, object_edge_p_pub_, object_edge_n_pub_ ;
     double object_diameter_, robot_diameter_, corridor_width_;
     std::vector<double>corridor_width_array_;
+    std::vector<double>corridor_object_width_array_;
 
     bool visualise_;
 
@@ -104,6 +106,10 @@ protected:
 
     geometry_msgs::PoseStamped goal_;
     nav_msgs::Path pushing_path_;
+    nav_msgs::Path edge_push_corridor_p_;
+    nav_msgs::Path edge_push_corridor_n_;
+    nav_msgs::Path edge_object_corridor_p_;
+    nav_msgs::Path edge_object_corridor_n_;
 
     geometry_msgs::PoseStamped getLookaheadPoint();
     geometry_msgs::PoseStamped getLookaheadPoint(geometry_msgs::PoseStamped pose_object_);

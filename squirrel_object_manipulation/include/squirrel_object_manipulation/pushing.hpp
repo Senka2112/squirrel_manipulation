@@ -82,6 +82,7 @@ private:
     ros::Publisher active_pub_;
     std::vector<double> corridor_width_array_;
 
+
     //robot pose update
     std::string pose_topic_;
     geometry_msgs::Pose2D pose_robot_;

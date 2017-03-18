@@ -27,6 +27,8 @@ double getNorm(arma::vec v);
 
 double getGaussianVal(double x, double sigma, double mi);
 
+double parallelCurveWidthTrans(double x, double dx, double y, double dy, bool sign, double w);
+
 
 
 #endif
