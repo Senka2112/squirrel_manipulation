@@ -5,6 +5,14 @@
 #include <stdlib.h>
 #include <armadillo>
 
+template <typename T>
+  std::string NumberToString ( T Number )
+  {
+     std::ostringstream ss;
+     ss << Number;
+     return ss.str();
+  }
+
 int sign(const double z);
 
 double distancePoints(double x1, double y1, double z1, double x2, double y2, double z2);
@@ -24,6 +32,7 @@ arma::vec pointOnLineWithDistanceFromPointOuter(double x1, double y1, double x2,
 double rotationDifference(double angle, double theta_robot);
 double getVectorAngle(double x, double y);
 double getNorm(arma::vec v);
+double getAngle(arma::vec v1, arma::vec v2);
 
 double getGaussianVal(double x, double sigma, double mi);
 

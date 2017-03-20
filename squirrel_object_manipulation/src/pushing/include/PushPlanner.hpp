@@ -117,6 +117,12 @@ protected:
     geometry_msgs::PoseStamped getLookaheadPointDynamic();
     geometry_msgs::PoseStamped getLookaheadPointDynamic(geometry_msgs::PoseStamped pose_object_);
 
+    geometry_msgs::PoseStamped getLookaheadPointDynamicFlex();
+    geometry_msgs::PoseStamped getLookaheadPointDynamicFlex(geometry_msgs::PoseStamped pose_object_);
+
+    geometry_msgs::PoseStamped getLookaheadPointDynamicFlexApprox();
+    geometry_msgs::PoseStamped getLookaheadPointDynamicFlexApprox(geometry_msgs::PoseStamped pose_object_);
+
     ros::NodeHandle nh;
 
     virtual void initChild() = 0;
@@ -154,6 +160,7 @@ public:
     void publishMarkerObjectCurrent(geometry_msgs::PoseStamped t_pose);
     void publishMarkerRobotCurrent(geometry_msgs::Pose2D t_pose);
     void publishPoint(geometry_msgs::PoseStamped t_pose);
+    void publishPoint(geometry_msgs::PoseStamped t_pose, int id);
     void publishPoint(arma::vec t);
     void publishCorridor();
     void deleteMarkers();

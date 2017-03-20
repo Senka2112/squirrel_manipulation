@@ -61,7 +61,7 @@ private:
     std::string robot_base_frame_, global_frame_;
 
     bool state_machine_, clearance_nav_, check_collisions_, obstacles_;
-    bool nav_, artag_, firstSet, save_data_, sim_;
+    bool nav_, artag_, firstSet, save_data_, sim_, static_paths_;
     double artag_offsetX, artag_offsetY, tag_t_prev;
 
     geometry_msgs::PoseStamped push_goal_;

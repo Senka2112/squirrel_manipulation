@@ -131,6 +131,11 @@ double getVectorAngle(double x, double y){
     return th;
 }
 
+double getAngle(arma::vec v1, arma::vec v2){
+
+    return acos((v1(0) * v2(0) + v1(1) * v2(1))/(getNorm(v1)*getNorm(v2)));
+}
+
 double getGaussianVal(double x, double sigma, double mi){
     double r = exp( - pow( x  - mi, 2) / (2 * pow(sigma, 2)));
     if (isnan(r)) r = 1.0;
