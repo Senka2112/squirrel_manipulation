@@ -37,12 +37,12 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("corridor_width", corridor_width_ , 1.6);
     private_nh.param("clearance_nav", clearance_nav_, true);
     private_nh.param("check_collisions", check_collisions_, true);
-    private_nh.param("navigation_", nav_, true);
-    private_nh.param("artag_", artag_, false);
-    private_nh.param("sim_", sim_,true);
+    private_nh.param("navigation_", nav_, false);
+    private_nh.param("artag_", artag_, true);
+    private_nh.param("sim_", sim_,false);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
-    private_nh.param("demo_path", demo_path, 0);
+    private_nh.param("demo_path", demo_path, 5);
     private_nh.param("static_paths_", static_paths_, true);
 
 
@@ -119,9 +119,9 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         //for the standalone demo
         if(!nav_){
-           //demo_path = goal->path.data;
-           //if(artag_) object_diameter_ = goal->object_diameter.data;
-           //corridor_width_ = goal->corridor_width.data;
+            //demo_path = goal->path.data;
+            //if(artag_) object_diameter_ = goal->object_diameter.data;
+            //corridor_width_ = goal->corridor_width.data;
         }
 
 
@@ -613,30 +613,36 @@ bool PushAction::getPushPath(){
             case 4:
             {
 
-                if (i < 35){
-                    double x_max = 1.2;
-                    p.pose.position.x = x_max / 35 * i;
-                    p.pose.position.y = 0.0;
-
-                }
-                else if(i < 70){
-                    double y_max = 1.2;
-                    p.pose.position.x = 1.20;
-                    p.pose.position.y = y_max / 35 * (i - 35);
-                }
-                else{
-                    double x_max = 1.0;
-                    double y_max = 1.0;
-                    p.pose.position.x = 1.2 - x_max / 30 * (i - 70);
-                    p.pose.position.y = 1.2 + y_max / 30 * (i - 70);
-
-                }
+                double x, y;
+                double x_max = 2.5;
+                vec a;
+                x = x_max/size * i;
+                y = 0.8 * sin( x );
+                a = rotate2DVector(x, y, -M_PI /4);
+                p.pose.position.x = a(0);
+                p.pose.position.y = a(1);
 
             }
                 break;
 
+            case 5:
+            {
+
+                double x, y;
+                double x_max = 3.5;
+                vec a;
+                x = x_max/size * i;
+                y = 0.8 * sin(x);
+                a = rotate2DVector(x, y, -M_PI /4);
+                p.pose.position.x = a(0);
+                p.pose.position.y = a(1);
+
 
             }
+                break;
+
+            }
+
 
             pushing_path_.poses.push_back(p);
 
@@ -646,8 +652,8 @@ bool PushAction::getPushPath(){
             for (unsigned int i=0; i<size; ++i) {
                 double x_max = 5;
                 double x = x_max/size * i;
-                double y = 0.2 * sin(2 * x);
-                corridor_width_array_.push_back(2.7*(robot_diameter_ + object_diameter_) + y);
+                double y = 0.2 * sin(3*x);
+                corridor_width_array_.push_back(2.2*(robot_diameter_ + object_diameter_) + y);
             }
         }
 

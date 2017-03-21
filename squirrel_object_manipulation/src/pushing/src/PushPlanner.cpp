@@ -472,9 +472,14 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         }
     }
 
+    //calculate relaxation coefficient
+    double epsilon = corridor_width_array_.at(path_object_ind) / (2 * robot_diameter_ +  2 *object_diameter_);
+    if(epsilon > 1.0) epsilon = 1.0;
+
     //calculate ratio  distance object to path / width  in closest point
     double d_object_path = distancePoints(pushing_path_.poses[path_object_ind].pose.position.x, pushing_path_.poses[path_object_ind].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
     double ratio_object = abs(d_object_path / (corridor_object_width_array_.at(path_object_ind) / 2));
+
 
     //determining the target point with minimum cost function
     double cost_max = 0;
@@ -504,8 +509,6 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
             }
 
             double angle = getAngle(push_line,tangent_line);
-            double penalty_object_corridor = abs(sin(angle)) - ratio_object;
-
 
 
             //minimal distance of the push-line from push corridor edges
@@ -529,22 +532,27 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
                     j_beta = j;
                 }
             }
-            //beta = min(beta, corridor_width_array_.at(i) / 2);
 
+            vec ideal_start = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
+            double d_min = std::numeric_limits<double>::infinity();
+            for (size_t l = 1; l < i + 1; l++) {
 
-            //            vec ideal_start = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
-            //            double d_min = std::numeric_limits<double>::infinity();
-            //            for (size_t l = 1; l < i + 1; l++) {
-            //                double d = distancePoints(pushing_path_.poses[l].pose.position.x, pushing_path_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
-            //                if (d < d_min) d_min = d;
-            //            }
-            //            if (visualise_)publishPoint(ideal_start);
+                double dn = distancePoints(edge_object_corridor_n_.poses[l].pose.position.x, edge_object_corridor_n_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
+                double dp = distancePoints(edge_object_corridor_p_.poses[l].pose.position.x, edge_object_corridor_p_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
 
-            //double penalty_tail =  corridor_width_ / 2 - zeta * (d_min + robot_diameter_ / 2);
+                if (dn < d_min) d_min = dn;
+                if (dp < d_min) d_min = dp;
+            }
+            if (visualise_)publishPoint(ideal_start);
+
+            double penalty_object_corridor = abs(sin(angle)) - epsilon * ratio_object + 0.05;
+
+            //cout <<"penalty_object_corridor "<<penalty_object_corridor<<endl;
+            double penalty_tail = d_min - robot_diameter_ / 2;
             double penalty_curve = beta - object_diameter_ / 2 - object_diameter_;
 
             double cost_curr = i;
-            if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))) cost_curr = 0;
+            if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;
             if (cost_curr > cost_max){
                 cost_max = cost_curr;
                 p_lookahead = i;
@@ -619,6 +627,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlexApprox(geome
 
     //calculate relaxation coefficient
     double epsilon = corridor_width_array_.at(path_object_ind) / (2 * robot_diameter_ +  2 *object_diameter_);
+    if(epsilon > 1.0) epsilon = 1.0;
 
     //calculate ratio  distance object to path / width  in closest point
     double d_object_path = distancePoints(pushing_path_.poses[path_object_ind].pose.position.x, pushing_path_.poses[path_object_ind].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
@@ -634,7 +643,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlexApprox(geome
     }
     //cost calculations
     else{
-        for (size_t i = 1; i < pushing_path_.poses.size() - 1; i++) {
+        for (size_t i = path_object_ind; i < pushing_path_.poses.size() - 1; i++) {
 
             //angle condition
             //calculating angle
