@@ -537,8 +537,8 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
             double d_min = std::numeric_limits<double>::infinity();
             for (size_t l = 1; l < i + 1; l++) {
 
-                double dn = distancePoints(edge_object_corridor_n_.poses[l].pose.position.x, edge_object_corridor_n_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
-                double dp = distancePoints(edge_object_corridor_p_.poses[l].pose.position.x, edge_object_corridor_p_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
+                double dn = distancePoints(edge_push_corridor_n_.poses[l].pose.position.x, edge_push_corridor_n_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
+                double dp = distancePoints(edge_push_corridor_p_.poses[l].pose.position.x, edge_push_corridor_p_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
 
                 if (dn < d_min) d_min = dn;
                 if (dp < d_min) d_min = dp;
@@ -549,7 +549,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
 
             //cout <<"penalty_object_corridor "<<penalty_object_corridor<<endl;
             double penalty_tail = d_min - robot_diameter_ / 2;
-            double penalty_curve = beta - object_diameter_ / 2 - object_diameter_;
+            double penalty_curve = beta - epsilon * (object_diameter_ / 2 - object_diameter_);
 
             double cost_curr = i;
             if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;

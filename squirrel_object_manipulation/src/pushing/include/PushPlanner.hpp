@@ -92,7 +92,7 @@ protected:
     geometry_msgs::Pose2D pose_robot_;
     geometry_msgs::PoseStamped pose_object_, previous_pose_object_;
     geometry_msgs::PoseStamped current_target_, previous_target_;
-
+    int current_target_ind_;
 
     arma::mat pose_robot_vec_;
     arma::mat pose_object_vec_;
