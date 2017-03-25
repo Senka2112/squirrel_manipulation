@@ -77,7 +77,12 @@ void HandoverAction::executeHandover(const squirrel_manipulation_msgs::HandoverG
         sleep (0.2);
 
         //arm control
-        actionlib::SimpleActionClient<squirrel_manipulation_msgs::JointPtpAction>  ptpActionClient("/joint_ptp", true);
+        //actionlib::SimpleActionClient<squirrel_manipulation_msgs::JointPtpAction>  ptpActionClient("/joint_ptp", true);
+        actionlib::SimpleActionClient<squirrel_manipulation_msgs::JointPtpAction> ptp("/joint_ptp", true);
+
+        ROS_INFO("Waiting for action server to start.");
+        ptp.waitForServer();
+        ROS_INFO("Action server started, sending goal.");
 
 
         //        ROS_INFO("(handover) setting up control queue \n");
@@ -139,23 +144,19 @@ void HandoverAction::executeHandover(const squirrel_manipulation_msgs::HandoverG
             copy(start_vienna.begin() + 3, start_vienna.end(), start.begin() + 3);
             copy(handover_vienna.begin() + 3, handover_vienna.end(), end.begin() + 3);
         }
-        std_msgs::Float64MultiArray data_arm;
+        std_msgs::Float64MultiArray data_arm, data_arm2;
 
         for(int i = 0; i < start.size(); i++){
             data_arm.data.push_back(start.at(i));
         }
-
-        squirrel_manipulation_msgs::JointPtpActionGoal armStartGoal;
         armStartGoal.goal.joints = data_arm;
 
-        data_arm.data.clear();
-        for(int i = 0; i < start.size(); i++){
-            data_arm.data.push_back(start.at(i));
+
+        for(int i = 0; i < end.size(); i++){
+            data_arm2.data.push_back(end.at(i));
         }
 
-        squirrel_manipulation_msgs::JointPtpActionGoal armEndGoal;
-        armEndGoal.goal.joints = data_arm;
-
+        armEndGoal.goal.joints = data_arm2;
 
         stage = 0;
 
@@ -218,9 +219,9 @@ void HandoverAction::executeHandover(const squirrel_manipulation_msgs::HandoverG
 
             if(runHandover_){
 
-                ptpActionClient.sendGoal(armEndGoal.goal);
-                ptpActionClient.waitForResult(ros::Duration(30.0));
-                if (ptpActionClient.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+                ptp.sendGoal(armEndGoal.goal);
+                ptp.waitForResult(ros::Duration(30.0));
+                if (ptp.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
                     ROS_INFO("(handover) Arm moved \n");
                     handover_success_ = true;
                 }else{
@@ -343,9 +344,9 @@ void HandoverAction::executeHandover(const squirrel_manipulation_msgs::HandoverG
             //if (runHandover_) robotinoQueue->jointPtp(end);
             if(runHandover_){
 
-                ptpActionClient.sendGoal(armEndGoal.goal);
-                ptpActionClient.waitForResult(ros::Duration(30.0));
-                if (ptpActionClient.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+                ptp.sendGoal(armEndGoal.goal);
+                ptp.waitForResult(ros::Duration(30.0));
+                if (ptp.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
                     ROS_INFO("(handover) Arm moved \n");
                     handover_success_ = true;
                 }else{
@@ -431,9 +432,9 @@ void HandoverAction::executeHandover(const squirrel_manipulation_msgs::HandoverG
             //if (runHandover_) robotinoQueue->jointPtp(start);
             if(runHandover_){
 
-                ptpActionClient.sendGoal(armStartGoal.goal);
-                ptpActionClient.waitForResult(ros::Duration(30.0));
-                if (ptpActionClient.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
+                ptp.sendGoal(armStartGoal.goal);
+                ptp.waitForResult(ros::Duration(30.0));
+                if (ptp.getState() == actionlib::SimpleClientGoalState::SUCCEEDED) {
                     ROS_INFO("(handover) Arm moved \n");
                     handover_success_ = true;
                 }else{

@@ -106,6 +106,13 @@ protected:
 
     squirrel_manipulation_msgs::HandoverResult handoverResult;
 
+    squirrel_manipulation_msgs::JointPtpActionGoal armStartGoal;
+
+    squirrel_manipulation_msgs::JointPtpActionGoal armEndGoal;
+    //actionlib::SimpleActionClient<squirrel_manipulation_msgs::JointPtpAction>  ptp;
+
+
+
     void sensorReadCallbackWrist(std_msgs::Float64MultiArray msg);
     void sensorReadCallbackFingers(std_msgs::Float64MultiArray msg);
     void callbackJoints(sensor_msgs::JointState msg);
