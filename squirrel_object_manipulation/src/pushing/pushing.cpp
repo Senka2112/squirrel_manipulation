@@ -19,7 +19,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
 {
     node_name_ = ros::this_node::getName();
 
-    private_nh.param("pose_topic", pose_topic_,std::string("/squirrel_localizer_pose"));
+    private_nh.param("pose_topic", pose_topic_,std::string("/squirrel_2d_localizer/pose"));
     private_nh.param("octomap_topic", octomap_topic_,std::string("/squirrel_3d_mapping/update"));
     private_nh.param("octomap_topic", costmap_topic_,std::string("/costmap/update"));
     private_nh.param("octomap_topic", laser_layer_topic_,std::string("/move_base/global_costmap/navigation_layer/enable_kinect"));
@@ -41,7 +41,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("check_collisions", check_collisions_, true);
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_,false);
-    private_nh.param("sim_", sim_,true);
+    private_nh.param("sim_", sim_,false);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
@@ -132,8 +132,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         if(!artag_ && !sim_ ){
             //get the object diameter
-
-            mongodb_store::MessageStoreProxy message_store(nh);
+/*            mongodb_store::MessageStoreProxy message_store(nh);
 
             //get the object diameter
 
@@ -156,7 +155,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
                 return;
             }
 
-            object_diameter_ = results[0]->bounding_cylinder.diameter;
+            object_diameter_ = results[0]->bounding_cylinder.diameter;*/
             if (object_diameter_ < 0.05) object_diameter_ = 0.20;
             if (object_diameter_ > 1.00) {
                 ROS_ERROR("(Push) Invalid value for the object size \n");
@@ -252,11 +251,11 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         try{
             //main push loop
             while (nh.ok() &&  push_planner_->push_active_  && runPushPlan_ ){
-                cout<<"here"<<endl;
+                //cout<<"here"<<endl;
 
                 push_planner_->updatePushPlanner(pose_robot_, pose_object_);
                 geometry_msgs::Twist cmd = push_planner_->getControlCommand();
-                cout<<"execute cmd "<<cmd<<endl;
+                //cout<<"execute cmd "<<cmd<<endl;
                 robotino->singleMove(cmd.linear.x, cmd.linear.y,0.0,0.0,0.0,cmd.angular.z);
 
                 lRate.sleep();
@@ -464,6 +463,7 @@ bool PushAction::getPushPath(){
         srvPlan.request.object.points.push_back(p4);
         srvPlan.request.sleep = ros::Duration(0.1);
 
+        cout<<srvPlan.request.object<<endl;
         if ( ros::service::call("/move_base/global_costmap/navigation_layer/clearObjectFromCostmap", srvPlan) ) {
         } else {
             ROS_ERROR("(Push) unable to communicate with move_base/global_costmap/navigation_layer/clearObjectFromCostmap");
@@ -483,7 +483,7 @@ bool PushAction::getPushPath(){
         getPlanSrv.request.goal.header.frame_id = global_frame_;
         getPlanSrv.request.tolerance = 0.0;
         getPlanSrv.request.goal.header.stamp = ros::Time::now();
-
+        cout<<" start point for path"<<endl<<getPlanSrv.request.start<<endl;
 
         if (ros::service::call("/move_base/make_plan", getPlanSrv)) {
             if (getPlanSrv.response.plan.poses.empty() ) {
@@ -497,7 +497,7 @@ bool PushAction::getPushPath(){
         }
 
         ROS_INFO("(Push) Got pushing plan \n");
-
+        pushing_path_.poses.clear();
         pushing_path_.header.frame_id = global_frame_;
         for (unsigned int i=0; i<getPlanSrv.response.plan.poses.size(); ++i) {
 
@@ -742,7 +742,7 @@ bool PushAction::startTracking() {
 
         squirrel_object_perception_msgs::StartObjectTracking srvStartTrack;
         srvStartTrack.request.object_id.data = object_id_;
-        return(ros::service::call("/squirrel_start_object_tracking", srvStartTrack));
+        return(ros::service::call("/squirrel_start_lump_tracking", srvStartTrack));
     }
     else{
         while(!firstSet){
@@ -756,7 +756,7 @@ bool PushAction::stopTracking() {
     bool track = true;
     if(!artag_){
         squirrel_object_perception_msgs::StopObjectTracking srvStopTrack;
-        track = ros::service::call("/squirrel_stop_object_tracking", srvStopTrack);
+        track = ros::service::call("/squirrel_stop_lump_tracking", srvStopTrack);
         trackingStart_ = false;
         first_pose_ = false;
         objectLost_ = false;

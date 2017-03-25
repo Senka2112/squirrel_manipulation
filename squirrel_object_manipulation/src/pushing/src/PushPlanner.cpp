@@ -194,13 +194,13 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
     this->pose_robot_ = pose_robot_;
     this->pose_object_ = pose_object_;
     this->previous_target_ = this->current_target_;
-    cout<<"in update 4"<<endl;
+   //cout<<"in update 4"<<endl;
     this->current_target_ = this->getLookaheadPointDynamicFlex();
-    cout<<"in update 5"<<endl;
+   // cout<<"in update 5"<<endl;
     this->current_time_ = ros::Time::now().toSec();
 
     if (visualise_){
-         cout<<"in update 2"<<endl;
+     //    cout<<"in update 2"<<endl;
         publishMarkerTargetCurrent(current_target_);
         publishMarkerObjectCurrent(pose_object_);
         publishMarkerRobotCurrent(pose_robot_);
