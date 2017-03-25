@@ -148,7 +148,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 6.86636e-44
+      Max Intensity: 5.60519e-45
       Min Color: 0; 0; 0
       Min Intensity: -999999
       Name: LaserScan
@@ -190,7 +190,7 @@ Visualization Manager:
       Radius: 0.03
       Shaft Diameter: 0.1
       Shaft Length: 0.1
-      Topic: /move_base/NavfnROS/plan
+      Topic: /move_base/GlobalPlanner/plan
       Unreliable: false
       Value: true
     - Alpha: 0.7
@@ -277,7 +277,7 @@ Visualization Manager:
       Marker Topic: /push_action/current_target
       Name: Marker
       Namespaces:
-        push_action: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -285,7 +285,7 @@ Visualization Manager:
       Marker Topic: /push_action/current_object_pose
       Name: Marker
       Namespaces:
-        push_action: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -293,7 +293,7 @@ Visualization Manager:
       Marker Topic: /push_action/point
       Name: Marker
       Namespaces:
-        push_action: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -323,7 +323,7 @@ Visualization Manager:
       Marker Topic: /push_action/push_corridor
       Name: MarkerArray
       Namespaces:
-        push_corridor: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -339,7 +339,7 @@ Visualization Manager:
       Marker Topic: /push_action/object_corridor
       Name: MarkerArray
       Namespaces:
-        object_corridor: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 1

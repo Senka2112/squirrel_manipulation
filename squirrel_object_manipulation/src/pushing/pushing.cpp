@@ -22,6 +22,8 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("pose_topic", pose_topic_,std::string("/squirrel_localizer_pose"));
     private_nh.param("octomap_topic", octomap_topic_,std::string("/squirrel_3d_mapping/update"));
     private_nh.param("octomap_topic", costmap_topic_,std::string("/costmap/update"));
+    private_nh.param("octomap_topic", laser_layer_topic_,std::string("/move_base/global_costmap/navigation_layer/enable_kinect"));
+    private_nh.param("octomap_topic", kinect_layer_topic_,std::string("/move_base/global_costmap/navigation_layer/enable_laser"));
     private_nh.param("robot_base_frame", robot_base_frame_, std::string("base_link"));
     private_nh.param("push_action_active", action_active_topic_, std::string("/pushing_action"));
     private_nh.param("global_frame", global_frame_, std::string("/map"));
@@ -37,13 +39,13 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("corridor_width", corridor_width_ , 1.6);
     private_nh.param("clearance_nav", clearance_nav_, true);
     private_nh.param("check_collisions", check_collisions_, true);
-    private_nh.param("navigation_", nav_, false);
-    private_nh.param("artag_", artag_, true);
-    private_nh.param("sim_", sim_,false);
+    private_nh.param("navigation_", nav_, true);
+    private_nh.param("artag_", artag_,false);
+    private_nh.param("sim_", sim_,true);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
-    private_nh.param("static_paths_", static_paths_, true);
+    private_nh.param("static_paths_", static_paths_, false);
 
 
     //private_nh.param("push_planner", push_planner_, new PushPlanner());
@@ -58,11 +60,14 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
 
     //set callback for cancel request
+
     pushServer.registerPreemptCallback(boost::bind(&PushAction::preemptCB, this));
 
     pose_sub_ = nh.subscribe(pose_topic_, 2, &PushAction::updatePose, this);
     octomap_pub_ = nh.advertise<std_msgs::Bool>(octomap_topic_, 100);
     costmap_pub_ = nh.advertise<std_msgs::Bool>(costmap_topic_, 100);
+    kinect_layer_pub_ = nh.advertise<std_msgs::Bool>(kinect_layer_topic_, 100);
+    laser_layer_pub_ = nh.advertise<std_msgs::Bool>(laser_layer_topic_, 100);
     active_pub_ = nh.advertise<std_msgs::Bool>(action_active_topic_, 100);
     robotino = boost::shared_ptr<RobotinoControl>(new RobotinoControl(nh));
 
@@ -88,7 +93,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
     try{
 
-        if(!nav_){
+        if(!nav_ && !sim_){
             ros::ServiceClient rO=nh.serviceClient<robotino_msgs::ResetOdometry>("/reset_odometry");
             robotino_msgs::ResetOdometry R;
             R.request.x=0;
@@ -176,15 +181,19 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         ros::spinOnce();
 
         ROS_INFO("(Push) Octomaps off \n");
-        sleep (0.5);
+        sleep (0.2);
 
         // start object tracking
         //turn of costmaps
         std_msgs::Bool costmap_msg_;
         costmap_msg_.data = false;
         costmap_pub_.publish(costmap_msg_);
+        kinect_layer_pub_.publish(costmap_msg_);
+        laser_layer_pub_.publish(costmap_msg_);
         ros::spinOnce();
-        sleep (0.5);
+        sleep (0.2);
+
+
         // move camera for vision
         robotino->moveTilt(tilt_perception_);
         //robotino->movePan(pan_perception_);
@@ -192,7 +201,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         costmap_msg_.data = true;
         costmap_pub_.publish(costmap_msg_);
         ros::spinOnce();
-        sleep (2);
+        sleep (0.2);
 
         //activation for navigation
 
@@ -243,10 +252,11 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         try{
             //main push loop
             while (nh.ok() &&  push_planner_->push_active_  && runPushPlan_ ){
+                cout<<"here"<<endl;
 
                 push_planner_->updatePushPlanner(pose_robot_, pose_object_);
                 geometry_msgs::Twist cmd = push_planner_->getControlCommand();
-                //cout<<cmd<<endl;
+                cout<<"execute cmd "<<cmd<<endl;
                 robotino->singleMove(cmd.linear.x, cmd.linear.y,0.0,0.0,0.0,cmd.angular.z);
 
                 lRate.sleep();
@@ -424,7 +434,8 @@ bool PushAction::getPushPath(){
 
     if (!static_paths_){
 
-        squirrel_rgbd_mapping_msgs::GetPushingPlan srvPlan;
+        //clear costmap
+        squirrel_navigation::clear_object_from_costmap srvPlan;
 
         geometry_msgs::PoseStamped start_m;
         try {
@@ -436,16 +447,6 @@ bool PushAction::getPushPath(){
             return true;
         }
 
-        // Getting pushing plan
-        srvPlan.request.start.x =  start_m.pose.position.x;
-        srvPlan.request.start.y =  start_m.pose.position.y;
-        //        srvPlan.request.start.x =  pose_robot_.x;
-        //        srvPlan.request.start.y =  pose_robot_.y;
-        srvPlan.request.start.theta =  pose_robot_.theta;
-
-        srvPlan.request.goal.x = push_goal_.pose.position.x;
-        srvPlan.request.goal.y = push_goal_.pose.position.y;
-        srvPlan.request.goal.theta = tf::getYaw(push_goal_.pose.orientation);
 
         // Set object polygon
         geometry_msgs::Point32 p1, p2, p3, p4;
@@ -461,75 +462,84 @@ bool PushAction::getPushPath(){
         srvPlan.request.object.points.push_back(p2);
         srvPlan.request.object.points.push_back(p3);
         srvPlan.request.object.points.push_back(p4);
+        srvPlan.request.sleep = ros::Duration(0.1);
 
-        if ( ros::service::call("/getPushingPlan", srvPlan) ) {
-            if ( srvPlan.response.plan.poses.empty() ) {
+        if ( ros::service::call("/move_base/global_costmap/navigation_layer/clearObjectFromCostmap", srvPlan) ) {
+        } else {
+            ROS_ERROR("(Push) unable to communicate with move_base/global_costmap/navigation_layer/clearObjectFromCostmap");
+            return false;
+        }
+        ROS_INFO("(Push) Object cleared from the costmap \n");
+
+        //get plan
+        nav_msgs::GetPlan getPlanSrv;
+
+        // Getting pushing plan
+        getPlanSrv.request.start =  start_m;
+        getPlanSrv.request.start.header.frame_id = global_frame_;
+        getPlanSrv.request.start.header.stamp = ros::Time::now();
+        getPlanSrv.request.start.pose.orientation = tf::createQuaternionMsgFromYaw(pose_robot_.theta);
+        getPlanSrv.request.goal = push_goal_;
+        getPlanSrv.request.goal.header.frame_id = global_frame_;
+        getPlanSrv.request.tolerance = 0.0;
+        getPlanSrv.request.goal.header.stamp = ros::Time::now();
+
+
+        if (ros::service::call("/move_base/make_plan", getPlanSrv)) {
+            if (getPlanSrv.response.plan.poses.empty() ) {
                 ROS_WARN("(Push) Got an empty plan");
                 return false;
-
-            } else {
-                BOOST_ASSERT_MSG( srvPlan.response.plan.header.frame_id == "/map" ||
-                                  srvPlan.response.plan.header.frame_id == "map" ,
-                                  "returned path is not in requested frame");
             }
-        } else {
-            ROS_ERROR("(Push) unable to communicate with /getPushingPlan");
+        }
+        else {
+            ROS_ERROR("(Push) unable to communicate with /move_base/make_plan");
             return false;
         }
 
-        // Convert plan to global_frame_
+        ROS_INFO("(Push) Got pushing plan \n");
+
         pushing_path_.header.frame_id = global_frame_;
-        for (unsigned int i=0; i<srvPlan.response.plan.poses.size(); ++i) {
-            try {
-                geometry_msgs::PoseStamped p;
-                tfl_.waitForTransform("/map", global_frame_, ros::Time::now(), ros::Duration(0.5));
-                tfl_.transformPose(global_frame_, srvPlan.response.plan.poses[i], p);
-                p.header.frame_id = global_frame_;
-                if (pushing_path_.poses.size() > 1){
-                    geometry_msgs::PoseStamped pom = pushing_path_.poses[pushing_path_.poses.size() - 1];
-                    pom.pose.position.x = (pom.pose.position.x + p.pose.position.x) / 2;
-                    pom.pose.position.y = (pom.pose.position.y + p.pose.position.y) / 2;
-                    pushing_path_.poses.push_back(pom);
-                }
-                pushing_path_.poses.push_back(p);
-            } catch (tf::TransformException& ex) {
-                ROS_ERROR("%s: %s", node_name_.c_str(), ex.what());
-                return false;
-            }
+        for (unsigned int i=0; i<getPlanSrv.response.plan.poses.size(); ++i) {
+
+            geometry_msgs::PoseStamped p = getPlanSrv.response.plan.poses[i];
+            p.header.frame_id = global_frame_;
+            //                        if (pushing_path_.poses.size() > 1){
+            //                            geometry_msgs::PoseStamped pom = pushing_path_.poses[pushing_path_.poses.size() - 1];
+            //                            pom.pose.position.x = (pom.pose.position.x + p.pose.position.x) / 2;
+            //                            pom.pose.position.y = (pom.pose.position.y + p.pose.position.y) / 2;
+            //                            pushing_path_.poses.push_back(pom);
+            //                        }
+            pushing_path_.poses.push_back(p);
+
         }
 
         //Get clearance from navigation
         if(clearance_nav_){
             corridor_width_ = -1.0;
-            if(srvPlan.response.clearance.data.size() != srvPlan.response.plan.poses.size()){
-                ROS_ERROR(" Path length not equal to clearance length \n");
-                cout << endl;
-                throw;
-            }
 
-            for (int i = 0; i<srvPlan.response.clearance.data.size(); ++i){
-                if (corridor_width_array_.size() > 1){
-                    double pom = corridor_width_array_.at(corridor_width_array_.size() - 1);
-                    pom = std::max(pom, 2* (robot_diameter_ + object_diameter_));
-                    pom = (pom + srvPlan.response.clearance.data[i]) / 2;
-                    //                    if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
-                    //                    else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
-                    //                    else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
-                    //                    else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
-                    //                    pom = 0.2;
-                    corridor_width_array_.push_back(pom);
+            squirrel_navigation::get_path_clearance ClearSrv;
+
+            ClearSrv.request.plan = getPlanSrv.response.plan;
+
+
+            if (ros::service::call("/move_base/global_costmap/navigation_layer/getPathClearance", ClearSrv) ) {
+                if ( ClearSrv.response.proximities.empty() ) {
+                    ROS_WARN("(Push) Got an empty clearance");
+                    return false;
                 }
-                double pom = srvPlan.response.clearance.data[i];
-                pom = std::max(pom, 2*(robot_diameter_ + object_diameter_));
-                //                if(pushing_path_.poses.at(i).pose.position.x > 2.0) pom = pom - 1.2;
-                //                else if(pushing_path_.poses.at(i).pose.position.x > 1.5) pom = pom - 0.8;
-                //                else if(pushing_path_.poses.at(i).pose.position.x > 1.2) pom = pom - 0.5;
-                //                else if(pushing_path_.poses.at(i).pose.position.x > 1.0) pom = pom - 0.15;
-                //                pom = 0.2;
-
-                corridor_width_array_.push_back(pom);
-
+            } else {
+                ROS_ERROR("(Push) unable to communicate with /move_base/global_costmap/getPathClearance");
+                return false;
             }
+            ROS_INFO("(Push) Got clearance \n");
+
+
+            for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
+
+                corridor_width_array_ .push_back( 2 * ClearSrv.response.proximities.at(i));
+                cout<<ClearSrv.response.proximities.at(i)<<endl;
+            }
+
 
         }
 
@@ -708,6 +718,8 @@ void PushAction::finishPush(){
     //turn on costmap
     costmap_msg_.data = true;
     costmap_pub_.publish(costmap_msg_);
+    kinect_layer_pub_.publish(costmap_msg_);
+    laser_layer_pub_.publish(costmap_msg_);
     ros::spinOnce();
 
     ROS_INFO("(Push) Octomaps on \n");

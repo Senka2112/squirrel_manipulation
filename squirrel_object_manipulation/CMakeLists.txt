@@ -17,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   squirrel_manipulation_msgs
   squirrel_rgbd_mapping_msgs
   squirrel_object_perception_msgs
+  squirrel_navigation
+  squirrel_navigation_msgs
 )
 
 

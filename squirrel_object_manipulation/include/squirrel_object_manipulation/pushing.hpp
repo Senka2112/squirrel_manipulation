@@ -12,6 +12,10 @@
 #include <tf/transform_listener.h>
 
 #include <squirrel_rgbd_mapping_msgs/GetPushingPlan.h>
+#include <squirrel_navigation/clear_object_from_costmap.h>
+#include <nav_msgs/GetPlan.h>
+#include <squirrel_navigation/get_path_clearance.h>
+
 #include <squirrel_manipulation_msgs/PushAction.h>
 #include <squirrel_manipulation_msgs/PushActionFeedback.h>
 #include <squirrel_manipulation_msgs/PushActionGoal.h>
@@ -77,8 +81,12 @@ private:
     std::string octomap_topic_;
     std::string costmap_topic_;
     std::string action_active_topic_;
+    std::string laser_layer_topic_;
+    std::string kinect_layer_topic_;
     ros::Publisher octomap_pub_;
     ros::Publisher costmap_pub_;
+    ros::Publisher kinect_layer_pub_;
+    ros::Publisher laser_layer_pub_;
     ros::Publisher active_pub_;
     std::vector<double> corridor_width_array_;
 

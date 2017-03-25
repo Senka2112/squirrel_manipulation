@@ -8,8 +8,8 @@ DynamicPush::DynamicPush():
     PushPlanner()
 {
     private_nh.param("push/velocity_angular_max", vel_ang_max_ , 0.6);
-    private_nh.param("push/velocity_linear_max", vel_lin_max_ , 0.15);
-    private_nh.param("push/velocity_linear_min", vel_lin_min_ , 0.08);
+    private_nh.param("push/velocity_linear_max", vel_lin_max_ , 0.3); //0.15
+    private_nh.param("push/velocity_linear_min", vel_lin_min_ , 0.08); //0.08
 
     private_nh.param("push/proportional_theta", p_theta_, 0.6);
     private_nh.param("push/derivative_theta", d_theta_, 0.4);
@@ -49,8 +49,6 @@ void DynamicPush::initChild() {
     alpha_vec.resize(1);
 
     data_cont_mat_.set_size(pushing_path_.poses.size(), 11);
-
-    
 }
 
 void DynamicPush::updateChild() {
@@ -114,10 +112,10 @@ void DynamicPush::updateChild() {
     psi_rel_ = 1 - psi_push_;
     filt_com = 1.0;
     //cout<<" psi_push "<<psi_push_<<"psi relocate "<<psi_rel_<<endl;
-    if(dR2O >robot_diameter_ + object_diameter_){
+    if(dR2O >robot_diameter_){
         psi_rel_ = 0;
         filt_com = 0;
-        //cout<<"here"<<endl;
+        cout<<"(push dynamic) dR2O >robot_diameter_"<<endl;
     }
     else if(abs(aPOR - M_PI) > 0.6){
         psi_push_  = 0;
@@ -174,7 +172,7 @@ geometry_msgs::Twist DynamicPush::getVelocities(){
     double vy_compensate =  - psi_push_ * cos(alpha) * (mean(alpha_vec) - alpha);
 
 
-    if ((sqrt (vx_compensate * vx_compensate + vy_compensate * vy_compensate) > 0.6) || (psi_rel_ = 0)){
+    if ((sqrt (vx_compensate * vx_compensate + vy_compensate * vy_compensate) > 0.6) || (psi_rel_ == 0)){
         vx_compensate = 0;
         vy_compensate = 0;
     }
@@ -225,6 +223,8 @@ geometry_msgs::Twist DynamicPush::getVelocities(){
     cmd.linear.y = V * v(1) / getNorm(v);
 
     double orient_error = rotationDifference(aR2O,pose_robot_.theta);
+    //cout<<"aR2O "<<aR2O << "robot orient"<<pose_robot_.theta<<endl;
+    //cout<< "orient_ error "<< orient_error<<endl;
     if(orient_error > 0.3){
         cmd.linear.x = 0;
         cmd.linear.y = 0;
@@ -232,7 +232,7 @@ geometry_msgs::Twist DynamicPush::getVelocities(){
     }
     cmd.angular.z = pid_theta_.computeCommand(orient_error, ros::Duration(time_step_));
 
-
+    //cout<< "cmd "<<cmd<<endl;
     return cmd;
 
 }
