@@ -41,7 +41,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("check_collisions", check_collisions_, true);
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_,false);
-    private_nh.param("sim_", sim_,false);
+    private_nh.param("sim_", sim_,true);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
@@ -65,7 +65,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
 
     pose_sub_ = nh.subscribe(pose_topic_, 2, &PushAction::updatePose, this);
     octomap_pub_ = nh.advertise<std_msgs::Bool>(octomap_topic_, 100);
-    costmap_pub_ = nh.advertise<std_msgs::Bool>(costmap_topic_, 100);
+    //costmap_pub_ = nh.advertise<std_msgs::Bool>(costmap_topic_, 100);
     kinect_layer_pub_ = nh.advertise<std_msgs::Bool>(kinect_layer_topic_, 100);
     laser_layer_pub_ = nh.advertise<std_msgs::Bool>(laser_layer_topic_, 100);
     active_pub_ = nh.advertise<std_msgs::Bool>(action_active_topic_, 100);
@@ -174,22 +174,23 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         ros::spinOnce();
 
         //turn off octomap
-        std_msgs::Bool octomap_msg_;
-        octomap_msg_.data = false;
-        octomap_pub_.publish(octomap_msg_);
-        ros::spinOnce();
+        //std_msgs::Bool octomap_msg_;
+        //octomap_msg_.data = false;
+        //octomap_pub_.publish(octomap_msg_);
+        //ros::spinOnce();
 
-        ROS_INFO("(Push) Octomaps off \n");
-        sleep (0.2);
+      //  ROS_INFO("(Push) Octomaps off \n");
+        //sleep (0.2);
 
         // start object tracking
-        //turn of costmaps
+        //turn off costmaps
         std_msgs::Bool costmap_msg_;
         costmap_msg_.data = false;
-        costmap_pub_.publish(costmap_msg_);
+        //costmap_pub_.publish(costmap_msg_);
         kinect_layer_pub_.publish(costmap_msg_);
         laser_layer_pub_.publish(costmap_msg_);
         ros::spinOnce();
+        ROS_INFO("(Push) Octomaps, kinect and laser layer off \n");
         sleep (0.2);
 
 
@@ -197,17 +198,17 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         robotino->moveTilt(tilt_perception_);
         //robotino->movePan(pan_perception_);
         //turn on costmaps
-        costmap_msg_.data = true;
-        costmap_pub_.publish(costmap_msg_);
+       // costmap_msg_.data = true;
+       // costmap_pub_.publish(costmap_msg_);
         ros::spinOnce();
-        sleep (0.2);
+       // sleep (0.2);
 
         //activation for navigation
 
-        std_msgs::Bool active_msg_;
-        active_msg_.data = true;
+        //std_msgs::Bool active_msg_;
+        //active_msg_.data = true;
         //active_pub_.publish(active_msg_);
-        ros::spinOnce();
+        //ros::spinOnce();
 
         if(startTracking()){
             ROS_INFO("(Push) Waiting for the tracker of the %s to start \n", goal->object_id.c_str());
@@ -319,6 +320,8 @@ bool PushAction::getFirstObjectPose(){
             }
 
         }
+
+        cout << "pushing - first object pose"<<endl;
 
         return first_pose_;
     }
@@ -495,11 +498,12 @@ bool PushAction::getPushPath(){
             ROS_ERROR("(Push) unable to communicate with /move_base/make_plan");
             return false;
         }
+        cout<<"first pose in path "<<getPlanSrv.response.plan.poses[0]<<endl;
 
         ROS_INFO("(Push) Got pushing plan \n");
         pushing_path_.poses.clear();
         pushing_path_.header.frame_id = global_frame_;
-        for (unsigned int i=0; i<getPlanSrv.response.plan.poses.size(); ++i) {
+        for (unsigned int i = 0; i<getPlanSrv.response.plan.poses.size(); ++i) {
 
             geometry_msgs::PoseStamped p = getPlanSrv.response.plan.poses[i];
             p.header.frame_id = global_frame_;
@@ -512,6 +516,7 @@ bool PushAction::getPushPath(){
             pushing_path_.poses.push_back(p);
 
         }
+        cout<< "pushting path length "<<pushing_path_.poses.size()<<endl;
 
         //Get clearance from navigation
         if(clearance_nav_){
@@ -533,12 +538,13 @@ bool PushAction::getPushPath(){
             }
             ROS_INFO("(Push) Got clearance \n");
 
-
+            corridor_width_array_ .clear();
             for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
 
                 corridor_width_array_ .push_back( 2 * ClearSrv.response.proximities.at(i));
-                cout<<ClearSrv.response.proximities.at(i)<<endl;
+                //cout<<ClearSrv.response.proximities.at(i)<<endl;
             }
+            cout << "proximity length "<<ClearSrv.response.proximities.size()<<endl;
 
 
         }
@@ -671,8 +677,6 @@ bool PushAction::getPushPath(){
     }
 
     ROS_INFO("(Push) Path ready for pushing \n");
-
-
     return true;
 
 }
@@ -706,10 +710,10 @@ void PushAction::finishPush(){
 
     //turn off costmap
     std_msgs::Bool costmap_msg_;
-    costmap_msg_.data = false;
-    costmap_pub_.publish(costmap_msg_);
-    ros::spinOnce();
-    sleep (0.5);
+//    costmap_msg_.data = false;
+//    costmap_pub_.publish(costmap_msg_);
+//    ros::spinOnce();
+//    sleep (0.5);
     //moving tilt for navigation configuration
     robotino->moveTilt(tilt_nav_);
     ros::spinOnce();
@@ -717,7 +721,7 @@ void PushAction::finishPush(){
 
     //turn on costmap
     costmap_msg_.data = true;
-    costmap_pub_.publish(costmap_msg_);
+    //costmap_pub_.publish(costmap_msg_);
     kinect_layer_pub_.publish(costmap_msg_);
     laser_layer_pub_.publish(costmap_msg_);
     ros::spinOnce();
@@ -742,7 +746,8 @@ bool PushAction::startTracking() {
 
         squirrel_object_perception_msgs::StartObjectTracking srvStartTrack;
         srvStartTrack.request.object_id.data = object_id_;
-        return(ros::service::call("/squirrel_start_lump_tracking", srvStartTrack));
+        if(!sim_) return(ros::service::call("/squirrel_start_lump_tracking", srvStartTrack));
+        else return(ros::service::call("/squirrel_start_object_tracking", srvStartTrack));
     }
     else{
         while(!firstSet){
@@ -756,7 +761,8 @@ bool PushAction::stopTracking() {
     bool track = true;
     if(!artag_){
         squirrel_object_perception_msgs::StopObjectTracking srvStopTrack;
-        track = ros::service::call("/squirrel_stop_lump_tracking", srvStopTrack);
+        if(!sim_) track = ros::service::call("/squirrel_stop_lump_tracking", srvStopTrack);
+        else track = ros::service::call("/squirrel_stop_object_tracking", srvStopTrack);
         trackingStart_ = false;
         first_pose_ = false;
         objectLost_ = false;

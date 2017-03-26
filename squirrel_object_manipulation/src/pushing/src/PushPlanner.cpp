@@ -423,14 +423,14 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamic(geometry_msgs::
 }
 
 geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_msgs::PoseStamped pose_object_){
-     cout << "here 1" <<endl;
+    // cout << "here 1" <<endl;
     //getting the closests point on push corridor edges to the object
     double dOEmin = std::numeric_limits<double>::infinity(); //distance to the push corridor edges
     string edge_side ; //edge to which the object is closer n, p
     string edge_side_curr; //edge to which the object is closer n, p
     int edge_min_ind = -1; //closest point on the edge to the object
     double d_curr;
-    cout << "here 2" <<endl;
+    //cout << "here 2" <<endl;
     for(size_t i = 0; i < edge_push_corridor_n_.poses.size(); i++) {
         if(distancePoints(edge_push_corridor_n_.poses[i].pose.position.x, edge_push_corridor_n_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y) < distancePoints(edge_push_corridor_p_.poses[i].pose.position.x, edge_push_corridor_p_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y)){
             d_curr = distancePoints(edge_push_corridor_n_.poses[i].pose.position.x, edge_push_corridor_n_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
@@ -447,7 +447,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         }
 
     }
-    cout << "here 3" <<endl;
+    //cout << "here 3" <<endl;
 
     double edge_point_x, edge_point_y;
     if (edge_side == "n"){
@@ -468,23 +468,23 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         throw;
     }
 
-    cout << "here 4" <<endl;
+    //cout << "here 4" <<endl;
 
     //geting tangent line in the point closest to the object on the object edge line
     vec tangent_line(2);
     int p = 0;
     while ((getNorm(tangent_line) == 0)||(p != 10)){
         if (edge_side == "n"){
-            tangent_line(0) = edge_object_corridor_n_.poses.at(edge_min_ind + 1).pose.position.x - edge_object_corridor_n_.poses.at(edge_min_ind).pose.position.x;
-            tangent_line(1) = edge_object_corridor_n_.poses.at(edge_min_ind + 1).pose.position.y - edge_object_corridor_n_.poses.at(edge_min_ind).pose.position.y;
+            tangent_line(0) = edge_object_corridor_n_.poses.at(edge_min_ind + p).pose.position.x - edge_object_corridor_n_.poses.at(edge_min_ind).pose.position.x;
+            tangent_line(1) = edge_object_corridor_n_.poses.at(edge_min_ind + p).pose.position.y - edge_object_corridor_n_.poses.at(edge_min_ind).pose.position.y;
         }
         else{
-            tangent_line(0) = edge_object_corridor_p_.poses.at(edge_min_ind + 1).pose.position.x - edge_object_corridor_p_.poses.at(edge_min_ind).pose.position.x;
-            tangent_line(1) = edge_object_corridor_p_.poses.at(edge_min_ind + 1).pose.position.y - edge_object_corridor_p_.poses.at(edge_min_ind).pose.position.y;
+            tangent_line(0) = edge_object_corridor_p_.poses.at(edge_min_ind + p).pose.position.x - edge_object_corridor_p_.poses.at(edge_min_ind).pose.position.x;
+            tangent_line(1) = edge_object_corridor_p_.poses.at(edge_min_ind + p).pose.position.y - edge_object_corridor_p_.poses.at(edge_min_ind).pose.position.y;
         }
         p++;
     }
-    cout << "here 5" <<endl;
+    //cout << "here 5" <<endl;
 
     //geting point on the path closest to the line formed by object position and closest point on the edge
     d_curr = std::numeric_limits<double>::infinity();
@@ -495,7 +495,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
             path_object_ind = i;
         }
     }
-    cout << "here 6" <<endl;
+    //cout << "here 6" <<endl;
 
     //calculate relaxation coefficient
     double zeta = corridor_width_array_.at(path_object_ind) / (2 * robot_diameter_ +  2 *object_diameter_);
@@ -563,7 +563,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
 
             vec ideal_start = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
             double d_min = std::numeric_limits<double>::infinity();
-            cout << "here 7" <<endl;
+            //cout << "here 7" <<endl;
             for (size_t l = 1; l < i + 1; l++) {
 
                 double dn = distancePoints(edge_push_corridor_n_.poses[l].pose.position.x, edge_push_corridor_n_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
@@ -591,7 +591,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
             //cout <<"penalty_object_corridor "<<penalty_object_corridor<<" push line "<<push_line<<" tangent line "<<tangent_line<< endl;
             //cout <<"i: "<<i<<" beta "<<beta<<" penalty_curve "<<penalty_curve<<" penalty_object_corridor "<<penalty_object_corridor<<" penalty_tail "<<penalty_tail<<endl;
 
-            cout << "here 8" <<endl;
+            //cout << "here 8" <<endl;
             double cost_curr = i;
             if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;
             if (cost_curr > cost_max){
