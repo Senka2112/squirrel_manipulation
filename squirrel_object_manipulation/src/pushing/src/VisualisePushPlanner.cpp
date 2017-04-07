@@ -169,6 +169,8 @@ void PushPlanner::publishCorridor(){
         marker.pose = pushing_path_.poses[i].pose;
         marker.pose.position.z= -0.1;
 
+        //marker.scale.x = corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_;
+        //marker.scale.y = corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_;
         marker.scale.x = corridor_object_width_array_.at(i);
         marker.scale.y = corridor_object_width_array_.at(i);
 

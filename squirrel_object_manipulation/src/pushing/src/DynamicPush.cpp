@@ -8,7 +8,7 @@ DynamicPush::DynamicPush():
     PushPlanner()
 {
     private_nh.param("push/velocity_angular_max", vel_ang_max_ , 0.6);
-    private_nh.param("push/velocity_linear_max", vel_lin_max_ , 0.3); //0.15
+    private_nh.param("push/velocity_linear_max", vel_lin_max_ , 0.2); //0.15
     private_nh.param("push/velocity_linear_min", vel_lin_min_ , 0.08); //0.08
 
     private_nh.param("push/proportional_theta", p_theta_, 0.6);
@@ -115,7 +115,8 @@ void DynamicPush::updateChild() {
     if(dR2O >robot_diameter_){
         psi_rel_ = 0;
         filt_com = 0;
-        cout<<"(push dynamic) dR2O >robot_diameter_"<<endl;
+        psi_push_ = 1;
+        cout<<"(push dynamic) dR2O >robot_diameter_ n"<<endl;
     }
     else if(abs(aPOR - M_PI) > 0.6){
         psi_push_  = 0;

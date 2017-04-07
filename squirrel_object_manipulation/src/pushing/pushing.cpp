@@ -46,17 +46,9 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
     private_nh.param("static_paths_", static_paths_, false);
+    private_nh.param("aproximate_", approximate_, true);
 
 
-    //private_nh.param("push_planner", push_planner_, new PushPlanner());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new SimplePathFollowing());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new SimplePush());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new BangBangPush());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new PIDPush());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new PIDSimplePush());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new PIDObjectPush());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new DipoleField());
-    //push_planner_ = boost::shared_ptr<PushPlanner>(new CentroidAlignment());
     push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
 
     //set callback for cancel request
@@ -172,15 +164,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         }
 
         ros::spinOnce();
-
-        //turn off octomap
-        //std_msgs::Bool octomap_msg_;
-        //octomap_msg_.data = false;
-        //octomap_pub_.publish(octomap_msg_);
-        //ros::spinOnce();
-
-      //  ROS_INFO("(Push) Octomaps off \n");
-        //sleep (0.2);
+        cout <<"object tracking started"<<endl;
 
         // start object tracking
         //turn off costmaps
@@ -189,29 +173,18 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         //costmap_pub_.publish(costmap_msg_);
         kinect_layer_pub_.publish(costmap_msg_);
         laser_layer_pub_.publish(costmap_msg_);
+
         ros::spinOnce();
         ROS_INFO("(Push) Octomaps, kinect and laser layer off \n");
-        sleep (0.2);
 
 
         // move camera for vision
         robotino->moveTilt(tilt_perception_);
-        //robotino->movePan(pan_perception_);
-        //turn on costmaps
-       // costmap_msg_.data = true;
-       // costmap_pub_.publish(costmap_msg_);
         ros::spinOnce();
-       // sleep (0.2);
 
-        //activation for navigation
-
-        //std_msgs::Bool active_msg_;
-        //active_msg_.data = true;
-        //active_pub_.publish(active_msg_);
-        //ros::spinOnce();
-
+        ROS_INFO("(Push) Waiting for the tracker of the %s to start \n", goal->object_id.c_str());
         if(startTracking()){
-            ROS_INFO("(Push) Waiting for the tracker of the %s to start \n", goal->object_id.c_str());
+
             trackingStart_ = true;
         }
         else{
@@ -230,6 +203,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
             return;
         }
         cout << endl;
+        cout <<"get path"<<endl;
 
         //getting path from navigation
         if(!getPushPath()){
@@ -242,7 +216,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         //initialize push planner
         if (runPushPlan_){
-            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_);
+            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_);
             push_planner_->visualisationOn();
             push_planner_->startPush();
         }
@@ -434,6 +408,8 @@ void PushAction::updatePose( const geometry_msgs::PoseWithCovarianceStamped::Con
 
 bool PushAction::getPushPath(){
 
+    try{
+
     if (!static_paths_){
 
         //clear costmap
@@ -452,11 +428,12 @@ bool PushAction::getPushPath(){
 
         // Set object polygon
         geometry_msgs::Point32 p1, p2, p3, p4;
+        double d = 0.25;
 
-        p1.x = start_m.pose.position.x + object_diameter_ / 2; p1.y = start_m.pose.position.y - object_diameter_ / 2;
-        p2.x = start_m.pose.position.x + object_diameter_ / 2; p2.y = start_m.pose.position.y + object_diameter_ / 2;
-        p3.x = start_m.pose.position.x - object_diameter_ / 2; p3.y = start_m.pose.position.y - object_diameter_ / 2;
-        p4.x = start_m.pose.position.x - object_diameter_ / 2; p4.y = start_m.pose.position.y + object_diameter_ / 2;
+        p1.x = start_m.pose.position.x + d; p1.y = start_m.pose.position.y - d;
+        p2.x = start_m.pose.position.x + d; p2.y = start_m.pose.position.y + d;
+        p3.x = start_m.pose.position.x - d; p3.y = start_m.pose.position.y - d;
+        p4.x = start_m.pose.position.x - d; p4.y = start_m.pose.position.y + d;
 
         // Make request
 
@@ -488,14 +465,14 @@ bool PushAction::getPushPath(){
         getPlanSrv.request.goal.header.stamp = ros::Time::now();
         cout<<" start point for path"<<endl<<getPlanSrv.request.start<<endl;
 
-        if (ros::service::call("/move_base/make_plan", getPlanSrv)) {
+        if (ros::service::call("/move_base/GlobalPlanner/make_plan", getPlanSrv)) {
             if (getPlanSrv.response.plan.poses.empty() ) {
                 ROS_WARN("(Push) Got an empty plan");
                 return false;
             }
         }
         else {
-            ROS_ERROR("(Push) unable to communicate with /move_base/make_plan");
+            ROS_ERROR("(Push) unable to communicate with /move_base/global_planner/get_plan");
             return false;
         }
         cout<<"first pose in path "<<getPlanSrv.response.plan.poses[0]<<endl;
@@ -540,11 +517,13 @@ bool PushAction::getPushPath(){
 
             corridor_width_array_ .clear();
             for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
-
-                corridor_width_array_ .push_back( 2 * ClearSrv.response.proximities.at(i));
+                double d = 2 * ClearSrv.response.proximities.at(i);
+                if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
+                if (d > 12 * object_diameter_) {d = 12 * object_diameter_; cout << "large d"<<endl;}
+                corridor_width_array_ .push_back(d);
                 //cout<<ClearSrv.response.proximities.at(i)<<endl;
             }
-            cout << "proximity length "<<ClearSrv.response.proximities.size()<<endl;
+            //cout << "proximity length "<<ClearSrv.response.proximities.size()<<endl;
 
 
         }
@@ -677,7 +656,11 @@ bool PushAction::getPushPath(){
     }
 
     ROS_INFO("(Push) Path ready for pushing \n");
-    return true;
+    return true;}
+    catch (...){
+        ROS_ERROR("(Push) Path getting failed \n");
+        return false;
+    }
 
 }
 
@@ -708,18 +691,13 @@ void PushAction::finishPush(){
     corridor_width_array_.clear();
     if(nav_) push_planner_->deleteMarkers();
 
-    //turn off costmap
-    std_msgs::Bool costmap_msg_;
-//    costmap_msg_.data = false;
-//    costmap_pub_.publish(costmap_msg_);
-//    ros::spinOnce();
-//    sleep (0.5);
     //moving tilt for navigation configuration
     robotino->moveTilt(tilt_nav_);
     ros::spinOnce();
     ROS_INFO("(Push) Camera in the pose for navigation \n");
 
     //turn on costmap
+    std_msgs::Bool costmap_msg_;
     costmap_msg_.data = true;
     //costmap_pub_.publish(costmap_msg_);
     kinect_layer_pub_.publish(costmap_msg_);

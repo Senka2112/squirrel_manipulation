@@ -28,8 +28,9 @@ Panels:
         - /Path5
         - /Path6
         - /Path7
+        - /Polygon1
       Splitter Ratio: 0.5
-    Tree Height: 357
+    Tree Height: 741
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -574,7 +575,7 @@ Visualization Manager:
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 85; 255
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.3
       Head Length: 0.2
       Length: 0.3
@@ -591,12 +592,12 @@ Visualization Manager:
       Shaft Length: 0.1
       Topic: /push_action/pushing_edge_n
       Unreliable: true
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 85; 255
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.3
       Head Length: 0.2
       Length: 0.3
@@ -613,12 +614,12 @@ Visualization Manager:
       Shaft Length: 0.1
       Topic: /push_action/pushing_edge_p
       Unreliable: true
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 85; 255
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.3
       Head Length: 0.2
       Length: 0.3
@@ -635,12 +636,12 @@ Visualization Manager:
       Shaft Length: 0.1
       Topic: /push_action/object_edge_n
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
       Color: 255; 85; 255
-      Enabled: true
+      Enabled: false
       Head Diameter: 0.3
       Head Length: 0.2
       Length: 0.3
@@ -656,6 +657,14 @@ Visualization Manager:
       Shaft Diameter: 0.1
       Shaft Length: 0.1
       Topic: /push_action/object_edge_p
+      Unreliable: false
+      Value: false
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 25; 255; 0
+      Enabled: true
+      Name: Polygon
+      Topic: /move_base/global_costmap/navigation_layer/clearing_area
       Unreliable: false
       Value: true
   Enabled: true
@@ -694,10 +703,10 @@ Visualization Manager:
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 1.5598
+      Pitch: 1.5348
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.60364
+      Yaw: 3.49364
     Saved: ~
 Window Geometry:
   Displays:
@@ -716,4 +725,4 @@ Window Geometry:
     collapsed: true
   Width: 932
   X: 918
-  Y: 14
+  Y: 24
