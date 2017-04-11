@@ -32,7 +32,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("tilt_perception", tilt_perception_, 1.3);
     private_nh.param("pan_perception", pan_perception_, 0.0);
     private_nh.param("lookahead", lookahead_, 0.30);
-    private_nh.param("goal_tolerance", goal_toll_, 0.15);
+    private_nh.param("goal_tolerance", goal_toll_, 0.05);
     private_nh.param("state_machine", state_machine_, false);
     private_nh.param("object_diameter", object_diameter_, 0.20);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
@@ -41,12 +41,14 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("check_collisions", check_collisions_, true);
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_,false);
-    private_nh.param("sim_", sim_,false);
+    private_nh.param("sim_", sim_,true);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
-    private_nh.param("static_paths_", static_paths_, false);
-    private_nh.param("aproximate_", approximate_, true);
+    private_nh.param("static_paths_", static_paths_, true);
+    private_nh.param("aproximate_", approximate_, false);
+    private_nh.param("arelaxation_", relaxation_, false);
+
 
 
     push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
@@ -216,7 +218,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         //initialize push planner
         if (runPushPlan_){
-            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_);
+            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_, relaxation_);
             push_planner_->visualisationOn();
             push_planner_->startPush();
         }
@@ -472,7 +474,7 @@ bool PushAction::getPushPath(){
             }
         }
         else {
-            ROS_ERROR("(Push) unable to communicate with /move_base/global_planner/get_plan");
+            ROS_ERROR("(Push) unable to communicate with /move_base/GlobalPlanner/make_plan");
             return false;
         }
         cout<<"first pose in path "<<getPlanSrv.response.plan.poses[0]<<endl;

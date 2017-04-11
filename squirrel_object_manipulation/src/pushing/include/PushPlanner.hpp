@@ -65,7 +65,7 @@ private:
 protected:
 
     bool state_machine_;
-    bool approximate_;
+    bool approximate_, relaxation_;
 
     PushState push_state_;
     ros::NodeHandle  private_nh;
@@ -135,8 +135,8 @@ public:
     bool push_active_;
 
     PushPlanner();
-    PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_,  double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_);
-    void initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_);
+    PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_,  double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_);
+    void initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_);
 
     virtual void updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_);
     virtual geometry_msgs::Twist getVelocities() = 0;

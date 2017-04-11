@@ -89,7 +89,7 @@ private:
     ros::Publisher laser_layer_pub_;
     ros::Publisher active_pub_;
     std::vector<double> corridor_width_array_;
-    bool approximate_;
+    bool approximate_, relaxation_;
 
 
     //robot pose update

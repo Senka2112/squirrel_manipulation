@@ -16,14 +16,14 @@ PushPlanner::PushPlanner()
     this->push_active_ = false;
 }
 
-PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_):
+PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_):
     private_nh("~")
 {
-    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_);
+    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_, relaxation_);
     
 }
 
-void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_){
+void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_){
     
     this->global_frame_ = global_frame_;
     this->local_frame_ = local_frame_;
@@ -43,6 +43,7 @@ void PushPlanner::initialize(string local_frame_, string global_frame_, geometry
     this->goal_ = pushing_path_.poses[pushing_path_.poses.size() - 1];
     this->corridor_width_array_ = corridor_width_array_;
     this->approximate_ = approximate_;
+    this->relaxation_ = relaxation_;
 
     edge_push_corridor_p_.header = pushing_path_.header;
     edge_push_corridor_n_.header = pushing_path_.header;
@@ -203,7 +204,7 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
     this->current_time_ = ros::Time::now().toSec();
 
     if (visualise_){
-        //    cout<<"in update 2"<<endl;
+
         publishMarkerTargetCurrent(current_target_);
         publishMarkerObjectCurrent(pose_object_);
         publishMarkerRobotCurrent(pose_robot_);
@@ -240,7 +241,6 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
 
     //distance robot object
     dR2O = distancePoints(pose_robot_.x, pose_robot_.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
-
 
     //distance robot to the line object-target
     dRlOT = distance2Line(pose_robot_.x, pose_robot_.y, pose_object_.pose.position.x, pose_object_.pose.position.y, current_target_.pose.position.x, current_target_.pose.position.y);
@@ -298,6 +298,7 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
         this->updateChild();
 
         if (dO2G < goal_toll_){
+            cout<<dO2G<<" and toll "<<goal_toll_<<endl;
             goal_reached_ = true;
             push_state_ = INACTIVE;
         }
@@ -401,7 +402,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamic(geometry_msgs::
                 double d = distancePoints(pushing_path_.poses[l].pose.position.x, pushing_path_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
                 if (d < d_min) d_min = d;
             }
-            //if (visualise_)publishPoint(ideal_start);
+            if (visualise_)publishPoint(ideal_start);
 
             double penalty_tail =  corridor_width_ / 2 - zeta * (d_min + robot_diameter_ / 2);
             double penalty_curve = corridor_width_ / 2 - zeta * (d_max + robot_diameter_ / 2);
@@ -426,14 +427,14 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamic(geometry_msgs::
 }
 
 geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_msgs::PoseStamped pose_object_){
-    // cout << "here 1" <<endl;
+
     //getting the closests point on push corridor edges to the object
     double dOEmin = std::numeric_limits<double>::infinity(); //distance to the push corridor edges
     string edge_side ; //edge to which the object is closer n, p
     string edge_side_curr; //edge to which the object is closer n, p
     int edge_min_ind = -1; //closest point on the edge to the object
-    double d_curr;
-    //cout << "here 2" <<endl;
+    double d_curr; //current distance
+
     for(size_t i = 0; i < edge_push_corridor_n_.poses.size(); i++) {
         if(distancePoints(edge_push_corridor_n_.poses[i].pose.position.x, edge_push_corridor_n_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y) < distancePoints(edge_push_corridor_p_.poses[i].pose.position.x, edge_push_corridor_p_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y)){
             d_curr = distancePoints(edge_push_corridor_n_.poses[i].pose.position.x, edge_push_corridor_n_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
@@ -450,8 +451,8 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         }
 
     }
-    //cout << "here 3" <<endl;
 
+    //storing the point and visualising it
     double edge_point_x, edge_point_y;
     if (edge_side == "n"){
         edge_point_x = edge_push_corridor_n_.poses[edge_min_ind].pose.position.x;
@@ -471,8 +472,6 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         throw;
     }
 
-    //cout << "here 4" <<endl;
-
     //geting tangent line in the point closest to the object on the object edge line
     vec tangent_line(2);
     int p = 0;
@@ -487,7 +486,6 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         }
         p++;
     }
-    //cout << "here 5" <<endl;
 
     //geting point on the path closest to the line formed by object position and closest point on the edge
     d_curr = std::numeric_limits<double>::infinity();
@@ -498,115 +496,73 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
             path_object_ind = i;
         }
     }
-    //cout << "here 6" <<endl;
 
-    //calculate relaxation coefficient
-    double zeta = corridor_width_array_.at(path_object_ind) / (2 * robot_diameter_ +  2 *object_diameter_);
-    if(zeta > 1.0) zeta = 1.0;
-    //zeta = 1.0;
-
-    //calculate ratio  distance object to path / width  in closest point
+    //calculate ratio  distance object to path / width  in the closest point for angle condition
     double d_object_path = distancePoints(pushing_path_.poses[path_object_ind].pose.position.x, pushing_path_.poses[path_object_ind].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
-    double ratio_object = abs(d_object_path / (corridor_object_width_array_.at(path_object_ind) / 2));
-    if (zeta * ratio_object > 1.0)  ratio_object = 1.0;
-
+    double ratio_object = d_object_path / (corridor_object_width_array_.at(path_object_ind) / 2);
+    if (ratio_object > 1.0) ratio_object = 1.0;
 
     //determining the target point with minimum cost function
     double cost_max = 0;
     int p_lookahead = 0;
 
-    //if at the end choose goal
-    if(distancePoints(pushing_path_.poses[pushing_path_.poses.size() - 1].pose.position.x, pushing_path_.poses[pushing_path_.poses.size() - 1].pose.position.y, pushing_path_.poses[edge_min_ind].pose.position.x, pushing_path_.poses[edge_min_ind].pose.position.y) < lookahead_){
-        p_lookahead = pushing_path_.poses.size() - 1;
-    }
-    //cost calculations
-    else{
-        for (size_t i = 1; i < pushing_path_.poses.size() - 1; i++) {
+    for (size_t i = 1; i < pushing_path_.poses.size() - 1; i++) {
 
-            //angle condition
-            //calculating angle
-            vec push_line (2);
-            push_line(0) = pushing_path_.poses.at(i).pose.position.x - pose_object_.pose.position.x;
-            push_line(1) = pushing_path_.poses.at(i).pose.position.y - pose_object_.pose.position.y;
+        // I condition: angle and ratio for penalty object corridor
+        vec push_line (2);
+        push_line(0) = pushing_path_.poses.at(i).pose.position.x - pose_object_.pose.position.x;
+        push_line(1) = pushing_path_.poses.at(i).pose.position.y - pose_object_.pose.position.y;
 
-            double angle = getAngle(push_line,tangent_line);
-            if (isnan(angle)) angle = M_PI;
+        double angle = getAngle(push_line,tangent_line);
+        if (isnan(angle)) angle = M_PI;
 
-            //minimal distance of the push-line from push corridor edges
-            double beta = std::numeric_limits<double>::infinity();
-            int j_beta = std::numeric_limits<int>::infinity();
-            int start_count = path_object_ind;
-            if (path_object_ind > 10){
-                start_count = path_object_ind - 10;
-            }
-            for (size_t j = start_count; j < i; j++) {
-                double d_curr = corridor_width_array_.at(j) / 2 - distance2Line(pushing_path_.poses[j].pose.position.x, pushing_path_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
-                if(beta > d_curr) {
-                    beta = d_curr;
-                    j_beta = j;
-                }
-            }
-            //            string edge_side_line;
-            //            for (size_t j = start_count; j < i; j++) {
-            //                double d_curr = distance2Line(edge_push_corridor_p_.poses[j].pose.position.x, edge_push_corridor_p_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
-            //                if(beta > d_curr) {
-            //                    beta = d_curr;
-            //                    j_beta = j;
-            //                    edge_side_line = "p";
-            //                }
-            //            }
-            //            for (size_t j = start_count; j < i; j++) {
-            //                double d_curr = distance2Line(edge_push_corridor_n_.poses[j].pose.position.x, edge_push_corridor_n_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
-            //                if(beta > d_curr) {
-            //                    beta = d_curr;
-            //                    j_beta = j;
-            //                    edge_side_line = "n";
-            //                }
-            //            }
+        double penalty_object_corridor = abs(sin(angle)) - ratio_object + 0.05; //0.05 is a tollerance
 
+        // condition  for the relaxed case
+        double penalty_tail = 1.0;
+        if (relaxation_){
+            penalty_object_corridor = 1.0;
             vec ideal_start = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
             double d_min = std::numeric_limits<double>::infinity();
-            //cout << "here 7" <<endl;
             for (size_t l = 1; l < i + 1; l++) {
 
                 double dn = distancePoints(edge_push_corridor_n_.poses[l].pose.position.x, edge_push_corridor_n_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
                 double dp = distancePoints(edge_push_corridor_p_.poses[l].pose.position.x, edge_push_corridor_p_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
 
                 if (dn < d_min) d_min = dn;
-                if (dp < d_min)d_min = dp;
+                if (dp < d_min) d_min = dp;
             }
             if (visualise_)publishPoint(ideal_start);
-
-            double penalty_object_corridor = abs(sin(angle)) - zeta * ratio_object + 0.05;
-
-            //cout <<"penalty_object_corridor "<<penalty_object_corridor<<endl;
-            double penalty_tail = d_min - robot_diameter_ / 2;
-            double penalty_curve = beta - zeta* (object_diameter_/2 + robot_diameter_);
-            //check if on other side of curve with respect to push line
-            //            if ((edge_side_line == "n") && (distancePoints(edge_push_corridor_n_.poses[j_beta].pose.position.x, edge_push_corridor_n_.poses[j_beta].pose.position.y, pushing_path_.poses[j_beta].pose.position.x, pushing_path_.poses[j_beta].pose.position.y) < distance2Line(pushing_path_.poses[j_beta].pose.position.x, pushing_path_.poses[j_beta].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y))){
-            //                penalty_curve = 0;
-            //            }
-            //            if ((edge_side_line == "p") && (distancePoints(edge_push_corridor_p_.poses[j_beta].pose.position.x, edge_push_corridor_p_.poses[j_beta].pose.position.y, pushing_path_.poses[j_beta].pose.position.x, pushing_path_.poses[j_beta].pose.position.y) < distance2Line(pushing_path_.poses[j_beta].pose.position.x, pushing_path_.poses[j_beta].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y))){
-            //                penalty_curve = 0;
-            //            }
+            penalty_tail = d_min - robot_diameter_ / 2;
+        }
 
 
-            //cout <<"penalty_object_corridor "<<penalty_object_corridor<<" push line "<<push_line<<" tangent line "<<tangent_line<< endl;
-            //cout <<"i: "<<i<<" beta "<<beta<<" penalty_curve "<<penalty_curve<<" penalty_object_corridor "<<penalty_object_corridor<<" penalty_tail "<<penalty_tail<<endl;
-
-            //cout << "here 8" <<endl;
-            double cost_curr = i;
-            if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;
-            if (cost_curr > cost_max){
-                cost_max = cost_curr;
-                p_lookahead = i;
+        // II condition: minimal distance of the push-line from push corridor edges
+        double beta = std::numeric_limits<double>::infinity();
+        int j_beta = std::numeric_limits<int>::infinity();
+        for (size_t j = 0; j < i; j++) {
+            double d_curr = corridor_width_array_.at(j) / 2 - distance2Segment(pushing_path_.poses[j].pose.position.x, pushing_path_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
+            if(beta > d_curr) {
+                beta = d_curr;
+                j_beta = j;
             }
+        }
+
+        double penalty_curve;
+        if (!relaxation_) penalty_curve = beta - (object_diameter_ / 2 + robot_diameter_);
+        else penalty_curve = beta - robot_diameter_ / 2;
+
+        double cost_curr = i;
+        if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;
+        if (cost_curr > cost_max){
+            cost_max = cost_curr;
+            p_lookahead = i;
 
         }
+
     }
 
     if (p_lookahead > 0) current_target_ind_ = p_lookahead;
-    //if ((path_object_ind < 10) && (current_target_ind_ < 10)) current_target_ind_ = 10;
 
     return pushing_path_.poses[current_target_ind_];
 }
@@ -750,24 +706,24 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlexApprox(geome
         if (visualise_)publishPoint(ideal_start);
 
         double penalty_tail = 1;
-  //      int n; //define neigbourhood
-//        if (pushing_path_.poses.size() - i < 10){
-//            n = pushing_path_.poses.size() - i - 1;
-//        }
-//        else if (i < 10) n = i - 1;
-//        else n = 10;
-//        if (n < 0) n = 0;
-//        cout<<" curr n "<<n<<" curr i "<<i<<endl;
-//        double d_min = std::numeric_limits<double>::infinity();
+        //      int n; //define neigbourhood
+        //        if (pushing_path_.poses.size() - i < 10){
+        //            n = pushing_path_.poses.size() - i - 1;
+        //        }
+        //        else if (i < 10) n = i - 1;
+        //        else n = 10;
+        //        if (n < 0) n = 0;
+        //        cout<<" curr n "<<n<<" curr i "<<i<<endl;
+        //        double d_min = std::numeric_limits<double>::infinity();
 
-//         if (i > nO2P){
-//            for (size_t l = i - n; l < i + n; l++) {
-//                double d_curr = corridor_width_array_.at(l) / 2 - distancePoints(pushing_path_.poses[l].pose.position.x, pushing_path_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
-//                if (d_curr < d_min) d_min = d_curr;
-//            }
-//          penalty_tail = d_min - robot_diameter_ / 2;
+        //         if (i > nO2P){
+        //            for (size_t l = i - n; l < i + n; l++) {
+        //                double d_curr = corridor_width_array_.at(l) / 2 - distancePoints(pushing_path_.poses[l].pose.position.x, pushing_path_.poses[l].pose.position.y, ideal_start(0), ideal_start(1));
+        //                if (d_curr < d_min) d_min = d_curr;
+        //            }
+        //          penalty_tail = d_min - robot_diameter_ / 2;
 
-//        }
+        //        }
 
 
 

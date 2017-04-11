@@ -55,6 +55,15 @@ double distance2Line(double x0, double y0, double x1, double y1, double x2, doub
     return fabs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1)) / distancePoints(x1, y1, x2, y2);
 }
 
+// distance of point 0 from segment defined by points 1 and 2
+double distance2Segment(double x0, double y0, double x1, double y1, double x2, double y2){
+    vec p_close = closestPointOnLine(x0, y0, x1, y1,  x2, y2);
+    if (p_close(0)<std::min(x1,x2) || p_close(0)>std::max(x1,x2) || p_close(1)<std::min(y1,y2) || p_close(1)>std::max(y1,y2))
+        return 0.0;
+    else
+        return fabs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1)) / distancePoints(x1, y1, x2, y2);
+}
+
 vec closestPointOnLine(double x0, double y0, double x1, double y1, double x2, double y2){
     vec result(2);
 
@@ -140,11 +149,11 @@ double getGaussianVal(double x, double sigma, double mi){
     double r = exp( - pow( x  - mi, 2) / (2 * pow(sigma, 2)));
     if (isnan(r)) r = 1.0;
     return r;
- }
+}
 
 int sign(const double z)
 {
-   return (z > 0.0) ? 1 : - 1;
+    return (z > 0.0) ? 1 : - 1;
 }
 
 vec pointsOnLineWithDistanceFromPoint(double x1, double y1, double x2, double y2, double d){
