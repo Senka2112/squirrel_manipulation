@@ -47,7 +47,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("demo_path", demo_path, 5);
     private_nh.param("static_paths_", static_paths_, true);
     private_nh.param("aproximate_", approximate_, false);
-    private_nh.param("arelaxation_", relaxation_, false);
+    private_nh.param("relaxation_", relaxation_, true);
 
 
 
@@ -445,7 +445,7 @@ bool PushAction::getPushPath(){
         srvPlan.request.object.points.push_back(p4);
         srvPlan.request.sleep = ros::Duration(0.1);
 
-        cout<<srvPlan.request.object<<endl;
+
         if ( ros::service::call("/move_base/global_costmap/navigation_layer/clearObjectFromCostmap", srvPlan) ) {
         } else {
             ROS_ERROR("(Push) unable to communicate with move_base/global_costmap/navigation_layer/clearObjectFromCostmap");
@@ -465,7 +465,6 @@ bool PushAction::getPushPath(){
         getPlanSrv.request.goal.header.frame_id = global_frame_;
         getPlanSrv.request.tolerance = 0.0;
         getPlanSrv.request.goal.header.stamp = ros::Time::now();
-        cout<<" start point for path"<<endl<<getPlanSrv.request.start<<endl;
 
         if (ros::service::call("/move_base/GlobalPlanner/make_plan", getPlanSrv)) {
             if (getPlanSrv.response.plan.poses.empty() ) {
@@ -477,7 +476,7 @@ bool PushAction::getPushPath(){
             ROS_ERROR("(Push) unable to communicate with /move_base/GlobalPlanner/make_plan");
             return false;
         }
-        cout<<"first pose in path "<<getPlanSrv.response.plan.poses[0]<<endl;
+
 
         ROS_INFO("(Push) Got pushing plan \n");
         pushing_path_.poses.clear();
@@ -495,7 +494,7 @@ bool PushAction::getPushPath(){
             pushing_path_.poses.push_back(p);
 
         }
-        cout<< "pushting path length "<<pushing_path_.poses.size()<<endl;
+
 
         //Get clearance from navigation
         if(clearance_nav_){
@@ -521,12 +520,10 @@ bool PushAction::getPushPath(){
             for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
                 double d = 2 * ClearSrv.response.proximities.at(i);
                 if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
-                if (d > 12 * object_diameter_) {d = 12 * object_diameter_; cout << "large d"<<endl;}
+                if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "large d"<<endl;}
                 corridor_width_array_ .push_back(d);
-                //cout<<ClearSrv.response.proximities.at(i)<<endl;
-            }
-            //cout << "proximity length "<<ClearSrv.response.proximities.size()<<endl;
 
+            }
 
         }
 

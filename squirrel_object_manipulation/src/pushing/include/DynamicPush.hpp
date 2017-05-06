@@ -18,23 +18,23 @@ private:
     ros::Publisher compensate_pub_;
     ros::Publisher push_pub_;
     ros::Publisher rel_pub_;
-    ros::Publisher sigma_theta_pub_;
-    ros::Publisher mi_theta_pub_;
+    ros::Publisher sigma_alpha_pub_;
+    ros::Publisher mi_alpha_pub_;
 
-    control_toolbox::Pid pid_theta_;
+    control_toolbox::Pid pid_alpha_;
     geometry_msgs::Twist cmd;
-    double p_theta_, d_theta_, i_theta_, i_theta_min_, i_theta_max_;
+    double p_alpha_, d_alpha_, i_alpha_, i_alpha_min_, i_alpha_max_;
 
     double filt_com;
-    double aPOR, mi_theta, sigma_theta, aPORp;
-    double alpha, alpha_old, mi_alpha, sigma_alpha;
+    double aPOR, mi_alpha, sigma_alpha, aPORp;
+    double gamma, gamma_old, mi_gamma, sigma_gamma;
     double beta, beta_old, mi_beta, sigma_beta;
     int count_dr, count_all;
     double psi_push_, psi_rel_;
     double expected_dir, executed_dir, result_dir;
 
     arma::mat data_cont_mat_;
-    arma::vec theta_vec, alpha_vec;
+    arma::vec alpha_vec, gamma_vec;
 
 
 protected:
