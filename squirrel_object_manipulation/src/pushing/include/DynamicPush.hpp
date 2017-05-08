@@ -26,7 +26,7 @@ private:
     double p_alpha_, d_alpha_, i_alpha_, i_alpha_min_, i_alpha_max_;
 
     double filt_com;
-    double aPOR, mi_alpha, sigma_alpha, aPORp;
+    double aPOR, mi_alpha, sigma_alpha, aPORp, mi_posterior, sigma_posterior,mi_posterior_pred, sigma_posterior_pred, mi_prior, sigma_prior, sum_alpha;
     double gamma, gamma_old, mi_gamma, sigma_gamma;
     double beta, beta_old, mi_beta, sigma_beta;
     int count_dr, count_all;

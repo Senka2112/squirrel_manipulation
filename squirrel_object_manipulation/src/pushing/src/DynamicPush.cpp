@@ -39,8 +39,15 @@ void DynamicPush::initChild() {
 
     mi_alpha = M_PI;
     sigma_alpha = M_PI / 3;
+    mi_posterior = M_PI;
+    sigma_posterior = M_PI /3;
+    mi_prior = M_PI;
+    sigma_prior = M_PI / 3;
+    mi_posterior_pred = M_PI;
+    sigma_posterior_pred = M_PI / 3;
     //sigma_alpha = 1.0;
     count_dr = 100;
+    sum_alpha = count_dr * mi_alpha;
 
     aPORp = aPOR;
     count_all = 1;
@@ -94,6 +101,14 @@ void DynamicPush::updateChild() {
 //                cout<<"update mi_alpha"<<endl;
 //            }
             //cout<<" sigma_alpha "<<sigma_alpha<<" mi_alpha "<<mi_alpha<<endl;
+            sum_alpha = sum_alpha + aPORp;
+
+            mi_prior = mi_posterior;
+            sigma_prior = sigma_posterior;
+            mi_posterior = (sigma_alpha * mi_prior/ count_dr+ sigma_prior*sum_alpha/count_dr)/(sigma_alpha/count_dr + sigma_prior);
+            sigma_posterior = 1/(count_dr/sigma_alpha + 1/sigma_prior);
+            mi_posterior_pred = mi_posterior;
+            sigma_posterior_pred = sigma_posterior + sigma_alpha;
         }
         gamma_vec.resize(gamma_vec.n_elem  + 1);
         gamma_vec(gamma_vec.n_elem - 1) = gamma;
@@ -104,7 +119,9 @@ void DynamicPush::updateChild() {
     aPORp = aPOR;
 
     //cout<<"aPOR "<<aPOR<<" sigma_alpha "<<sigma_alpha<<" mi_alpha "<<mi_alpha<<endl;
-    psi_push_ = getGaussianVal(aPOR, sigma_alpha, mi_alpha);
+    //psi_push_ = getGaussianVal(aPOR, sigma_alpha, mi_alpha);
+    //cout<<"alpha sigma: "<<sigma_alpha<<" mi_alpha "<<mi_alpha<<" sig post "<<sigma_posterior_pred<<"mi post "<<mi_posterior_pred<<endl;
+    psi_push_ = getGaussianVal(aPOR, sigma_posterior_pred, mi_posterior_pred);
     psi_rel_ = 1 - psi_push_;
     filt_com = 1.0;
     //cout<<" psi_push "<<psi_push_<<"psi relocate "<<psi_rel_<<endl;
