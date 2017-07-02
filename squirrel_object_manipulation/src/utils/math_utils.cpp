@@ -46,7 +46,10 @@ double angle3Points(double x1, double y1, double x2, double y2, double x3, doubl
     double a32 = atan2(y3 - y2, x3 -x2);
     if (isnan(a32)) a32 = 0;
 
-    return a32 - a12;
+    double alpha = a32 - a12;
+    if(alpha < -2*M_PI) alpha = alpha + 2*M_PI;
+    if(alpha > 2*M_PI) alpha = alpha - 2*M_PI;
+    return alpha;
 }
 
 // distance of point 0 from line defined by points 1 and 2
@@ -123,6 +126,10 @@ vec reflectPointOverPoint(double x0, double y0, double x1, double y1){
 double rotationDifference(double angle, double theta_robot){
 
     double err_th = angle - theta_robot;
+
+//    if(err_th > 2 * M_PI) err_th = - 2 * M_PI + err_th;
+//    if(err_th < -2 * M_PI) err_th = 2 * M_PI + err_th;
+
 
     if(err_th > M_PI) err_th = - (2 * M_PI - err_th);
     if(err_th < -M_PI) err_th = 2 * M_PI + err_th;

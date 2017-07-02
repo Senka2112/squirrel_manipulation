@@ -16,14 +16,14 @@ PushPlanner::PushPlanner()
     this->push_active_ = false;
 }
 
-PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_):
+PushPlanner::PushPlanner(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool , bool relaxation_):
     private_nh("~")
 {
-    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_, relaxation_);
+    this->initialize(local_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, fixed_, relaxation_);
     
 }
 
-void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool approximate_, bool relaxation_){
+void PushPlanner::initialize(string local_frame_, string global_frame_, geometry_msgs::Pose2D pose_robot_, geometry_msgs::PoseStamped pose_object_, nav_msgs::Path pushing_path_, double lookahead_, double goal_toll_, bool state_machine_, double controller_frequency_, double object_diameter_, double robot_diameter_, double corridor_width_, vector<double> corridor_width_array_,  bool fixed_, bool relaxation_){
     
     this->global_frame_ = global_frame_;
     this->local_frame_ = local_frame_;
@@ -42,8 +42,10 @@ void PushPlanner::initialize(string local_frame_, string global_frame_, geometry
     this->push_state_ = INACTIVE;
     this->goal_ = pushing_path_.poses[pushing_path_.poses.size() - 1];
     this->corridor_width_array_ = corridor_width_array_;
-    this->approximate_ = approximate_;
+    this->fixed_ = fixed_;
     this->relaxation_ = relaxation_;
+    this->sim_ = false;
+
 
     edge_push_corridor_p_.header = pushing_path_.header;
     edge_push_corridor_n_.header = pushing_path_.header;
@@ -83,6 +85,7 @@ void PushPlanner::initialize(string local_frame_, string global_frame_, geometry
         edge_push_corridor_n_.poses.push_back(p);
         if (i == this->corridor_width_array_.size() - 2) edge_push_corridor_n_.poses.push_back(p);
     }
+
 
     //calculating object corridor edges
     for (int i = 0; i < this->corridor_width_array_.size() - 2; i++){
@@ -197,8 +200,8 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
     this->pose_object_ = pose_object_;
     this->previous_target_ = this->current_target_;
 
-    if(!approximate_)this->current_target_ = this->getLookaheadPointDynamicFlex();
-    else this->current_target_ = this->getLookaheadPointDynamicFlexApprox();
+    if(!fixed_)this->current_target_ = this->getLookaheadPointDynamicFlex();
+    else this->current_target_ = this->getLookaheadPointFixedDistance();
     //this->current_target_ = this->getLookaheadPointDynamic();
 
     this->current_time_ = ros::Time::now().toSec();
@@ -256,7 +259,7 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
             relocate_target_(span(0,1)) = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2 + robot_diameter_ / 2);
             relocate_target_(2) = aO2P;
             rel_ = true;
-            //cout<<"here 2"<<endl;
+
         }
 
         //relocate_target_vec_(span(0,1),relocate_target_vec_.n_cols - 1) = pointOnLineWithDistanceFromPointOuter(pose_object_.pose.position.x, pose_object_.pose.position.y,  current_target_.pose.position.x, current_target_.pose.position.y, object_diameter_ / 2);
@@ -428,6 +431,20 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamic(geometry_msgs::
 
 geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_msgs::PoseStamped pose_object_){
 
+
+    //getting the closests point on path
+    int p_min_ind = 0;
+    double d_min = std::numeric_limits<double>::infinity();
+
+    for(size_t i = 0; i < pushing_path_.poses.size(); i++) {
+
+        double d_curr = distancePoints(pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
+        if (d_min > d_curr){
+            p_min_ind = i;
+            d_min = d_curr;
+        }
+    }
+
     //getting the closests point on push corridor edges to the object
     double dOEmin = std::numeric_limits<double>::infinity(); //distance to the push corridor edges
     string edge_side ; //edge to which the object is closer n, p
@@ -472,6 +489,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         throw;
     }
 
+
     //geting tangent line in the point closest to the object on the object edge line
     vec tangent_line(2);
     int p = 0;
@@ -502,6 +520,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
     double ratio_object = d_object_path / (corridor_object_width_array_.at(path_object_ind) / 2);
     if (ratio_object > 1.0) ratio_object = 1.0;
 
+
     //determining the target point with minimum cost function
     double cost_max = 0;
     int p_lookahead = 0;
@@ -516,7 +535,7 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
         double angle = getAngle(push_line,tangent_line);
         if (isnan(angle)) angle = M_PI;
 
-        double penalty_object_corridor = abs(sin(angle)) - ratio_object + 0.05; //0.05 is a tollerance
+        double penalty_object_corridor = abs(sin(angle)) - ratio_object + 0.1; //0.05 is a tollerance
 
         // condition  for the relaxed case
         double penalty_tail = 1.0;
@@ -533,24 +552,40 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
                 if (dp < d_min) d_min = dp;
             }
             if (visualise_)publishPoint(ideal_start);
-            penalty_tail = d_min - robot_diameter_ / 2;
+            penalty_tail = d_min - 0.10 - robot_diameter_ / 2;
         }
 
 
         // II condition: minimal distance of the push-line from push corridor edges
         double beta = std::numeric_limits<double>::infinity();
         int j_beta = std::numeric_limits<int>::infinity();
-        for (size_t j = 0; j < i; j++) {
-            double d_curr = corridor_width_array_.at(j) / 2 - distance2Segment(pushing_path_.poses[j].pose.position.x, pushing_path_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
-            if(beta > d_curr) {
-                beta = d_curr;
-                j_beta = j;
+
+        if (i > p_min_ind){
+            for (size_t j = p_min_ind + 1; j < i; j++) {
+                double d_curr = corridor_width_array_.at(j) / 2 - distance2Segment(pushing_path_.poses[j].pose.position.x, pushing_path_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
+                if(beta > d_curr) {
+                    beta = d_curr;
+                    j_beta = j;
+                }
+            }
+        }
+        else{
+            for (size_t j = 0; j < i; j++) {
+                double d_curr = corridor_width_array_.at(j) / 2 - distance2Segment(pushing_path_.poses[j].pose.position.x, pushing_path_.poses[j].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y, pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y);
+                if(beta > d_curr) {
+                    beta = d_curr;
+                    j_beta = j;
+                }
             }
         }
 
+
         double penalty_curve;
-        if (!relaxation_) penalty_curve = beta - (object_diameter_ / 2 + robot_diameter_);
-        else penalty_curve = beta - robot_diameter_ / 2;
+        if (!relaxation_) penalty_curve = beta + 0.05 - (object_diameter_ / 2 + robot_diameter_);
+        else penalty_curve = beta + 0.05 - robot_diameter_ / 2;
+        //        publishPoint(pushing_path_.poses.at(i), 1);
+        //        cout<< " i: "<<i<<" curve  "<<penalty_curve<< " corr "<<penalty_object_corridor<<" tail "<<penalty_tail<<endl;
+        //        sleep (1);
 
         double cost_curr = i;
         if ((penalty_curve <= 0)||((penalty_object_corridor <= 0))||((penalty_tail <= 0))) cost_curr = 0;
@@ -563,6 +598,8 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(geometry_ms
     }
 
     if (p_lookahead > 0) current_target_ind_ = p_lookahead;
+
+    if (abs(p_lookahead-p_min_ind)<5) return getLookaheadPointFixedDistance();
 
     return pushing_path_.poses[current_target_ind_];
 }
@@ -777,8 +814,9 @@ geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamic(){
 geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlex(){
     return this->getLookaheadPointDynamicFlex(this->pose_object_);
 }
-geometry_msgs::PoseStamped PushPlanner::getLookaheadPointDynamicFlexApprox(){
-    return this->getLookaheadPointDynamicFlexApprox(this->pose_object_);
+
+geometry_msgs::PoseStamped PushPlanner::getLookaheadPointFixedDistance(){
+    return this->getLookaheadPointFixedDistance(this->pose_object_);
 }
 
 void PushPlanner::setLookahedDistance(double d){
@@ -928,7 +966,7 @@ void PushPlanner::updateMatrix(){
 
 void PushPlanner::saveData(string path){
 
-    std::ofstream rFile, oFile, tarFile, tFile ;
+    std::ofstream rFile, oFile, tarFile, tFile, cFile ;
 
     string nameF = path  + experimentName + "_robot.txt";
     rFile.open(nameF.c_str());
@@ -941,6 +979,10 @@ void PushPlanner::saveData(string path){
 
     string namet = path  + experimentName + "_time.txt";
     tFile.open(namet.c_str());
+
+    string nameC = path  + experimentName + "_corr.txt";
+    cFile.open(nameC.c_str());
+
 
 
     for (int i = 0; i < elem_count_; i ++){
@@ -956,15 +998,65 @@ void PushPlanner::saveData(string path){
         tarFile << endl;
     }
 
+    for (int i = 0; i < pushing_path_.poses.size() ; i ++){
+        cFile << pushing_path_.poses[i].pose.position.x<<"\t"<<pushing_path_.poses[i].pose.position.y<<"\t"<<corridor_width_array_.at(i)<<endl;
+    }
+
+
+
     tFile.close();
     rFile.close();
     tarFile.close();
     oFile.close();
+    cFile.close();
 
     this->saveDataChild(path);
+
+
 
 }
 
 void PushPlanner::setExperimentName(string name){
     this->experimentName = name;
+}
+
+void PushPlanner::setSim(){
+    this->sim_=true;
+}
+
+geometry_msgs::PoseStamped PushPlanner::getLookaheadPointFixedDistance(geometry_msgs::PoseStamped pose_object_){
+
+    //getting the closests point on path
+    int p_min_ind = 0;
+    double d_min = std::numeric_limits<double>::infinity();
+
+    for(size_t i = 0; i < pushing_path_.poses.size(); i++) {
+
+        double d_curr = distancePoints(pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y);
+        if (d_min > d_curr){
+            p_min_ind = i;
+            d_min = d_curr;
+        }
+    }
+
+    int p_lookahead = 0;
+    double neighbourhood_min = 0.05;
+
+
+
+    for (size_t i = p_min_ind; i < pushing_path_.poses.size(); i++) {
+
+        double d_curr = distancePoints(pushing_path_.poses[i].pose.position.x, pushing_path_.poses[i].pose.position.y, pushing_path_.poses[p_min_ind].pose.position.x, pushing_path_.poses[p_min_ind].pose.position.y);
+        if (abs(d_curr - lookahead_) < neighbourhood_min){
+            neighbourhood_min = abs(d_curr - lookahead_);
+            p_lookahead = i;
+        }
+    }
+    if (distancePoints(pushing_path_.poses[p_min_ind].pose.position.x, pushing_path_.poses[p_min_ind].pose.position.y, pose_object_.pose.position.x, pose_object_.pose.position.y) > 0.05){
+        p_lookahead = p_min_ind;
+    }
+    if(p_min_ind > pushing_path_.poses.size() - 6 ) p_lookahead = pushing_path_.poses.size() - 1;
+
+    return pushing_path_.poses[p_lookahead];
+
 }

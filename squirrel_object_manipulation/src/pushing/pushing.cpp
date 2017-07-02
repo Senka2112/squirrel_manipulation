@@ -31,27 +31,30 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("tilt_nav", tilt_nav_, 0.75);
     private_nh.param("tilt_perception", tilt_perception_, 1.3);
     private_nh.param("pan_perception", pan_perception_, 0.0);
-    private_nh.param("lookahead", lookahead_, 0.30);
+    private_nh.param("lookahead", lookahead_, 0.10);
     private_nh.param("goal_tolerance", goal_toll_, 0.05);
     private_nh.param("state_machine", state_machine_, false);
-    private_nh.param("object_diameter", object_diameter_, 0.20);
+    private_nh.param("object_diameter", object_diameter_, 0.22);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
-    private_nh.param("clearance_nav", clearance_nav_, true);
-    private_nh.param("check_collisions", check_collisions_, true);
-    private_nh.param("navigation_", nav_, true);
-    private_nh.param("artag_", artag_,false);
-    private_nh.param("sim_", sim_,true);
-    private_nh.param("save_data", save_data_, false);
+
+
+    private_nh.param("clearance_nav", clearance_nav_, false);
+    private_nh.param("check_collisions", check_collisions_, false);
+    private_nh.param("navigation_", nav_, false);
+    private_nh.param("artag_", artag_,true);
+    private_nh.param("sim_", sim_, false);
+    private_nh.param("save_data", save_data_, true);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
-    private_nh.param("static_paths_", static_paths_, true);
-    private_nh.param("aproximate_", approximate_, false);
-    private_nh.param("relaxation_", relaxation_, true);
+    private_nh.param("static_paths_", static_paths_,true);
+    private_nh.param("fixed_lookahead_", fixed_, true);
+    private_nh.param("relaxation_", relaxation_, false);
 
 
 
     push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
+
 
     //set callback for cancel request
 
@@ -95,9 +98,17 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
             R.request.phi=0;
 
             if( rO.call(R))
-            {cout<<"call success"<<endl;}
-            else{ cout<<"call not successful"<<endl; }
+            {
+                ROS_INFO("(Push) odometry RESET successsful \n");
+                cout<<endl;
+            }
+            else{
+                ROS_ERROR("(Push) odometry RESET successsful \n");
+                cout<<endl;
+            }
+            sleep(1.0);
         }
+
 
 
         ROS_INFO("(Push) Started pushing of %s  \n",  goal->object_id.c_str());
@@ -126,7 +137,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         if(!artag_ && !sim_ ){
             //get the object diameter
-/*            mongodb_store::MessageStoreProxy message_store(nh);
+            /*            mongodb_store::MessageStoreProxy message_store(nh);
 
             //get the object diameter
 
@@ -156,6 +167,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
                 abortPush();
             }
         }
+        else if(artag_) firstSet = false;
 
 
         if(!isQuaternionValid(goal->pose.orientation)){
@@ -218,8 +230,9 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         //initialize push planner
         if (runPushPlan_){
-            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, approximate_, relaxation_);
+            push_planner_->initialize(robot_base_frame_, global_frame_, pose_robot_, pose_object_, pushing_path_, lookahead_, goal_toll_, state_machine_, controller_frequency_, object_diameter_, robot_diameter_, corridor_width_, corridor_width_array_, fixed_, relaxation_);
             push_planner_->visualisationOn();
+            if (this->sim_) push_planner_->setSim();
             push_planner_->startPush();
         }
 
@@ -228,7 +241,6 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         try{
             //main push loop
             while (nh.ok() &&  push_planner_->push_active_  && runPushPlan_ ){
-                //cout<<"here"<<endl;
 
                 push_planner_->updatePushPlanner(pose_robot_, pose_object_);
                 geometry_msgs::Twist cmd = push_planner_->getControlCommand();
@@ -241,8 +253,8 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         }
         catch (...){
         }
-        push_planner_->setExperimentName(object_id_ + "sim");
-        if (save_data_) push_planner_->saveData("/home/c7031098/squirrel_ws_new/data/");
+        push_planner_->setExperimentName(object_id_);
+        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/fixed_lookahead/");
 
         if(obstacles_){
             ROS_INFO("(Push) Obstacle detected");
@@ -358,7 +370,7 @@ void PushAction::objectTrackingThread(){
                 } catch (tf::TransformException& ex) {
                     std::string ns = ros::this_node::getNamespace();
                     std::string node_name = ros::this_node::getName();
-                    ROS_ERROR("(Push) %s/%s: %s", ns.c_str(), node_name.c_str(), ex.what());
+                    ROS_ERROR("(Push) Tracking error %s/%s: %s", ns.c_str(), node_name.c_str(), ex.what());
                     abortPush();
                 }
             }
@@ -412,250 +424,255 @@ bool PushAction::getPushPath(){
 
     try{
 
-    if (!static_paths_){
+        if (!static_paths_){
 
-        //clear costmap
-        squirrel_navigation::clear_object_from_costmap srvPlan;
+            //clear costmap
+            squirrel_navigation::clear_object_from_costmap srvPlan;
 
-        geometry_msgs::PoseStamped start_m;
-        try {
-            tfl_.waitForTransform(global_frame_, "/map", ros::Time::now(), ros::Duration(1.0));
-            tfl_.transformPose("/map", pose_object_, start_m);
-            start_m.header.frame_id = "/map";
-        } catch ( tf::TransformException& ex ) {
-            ROS_ERROR("%s: %s", node_name_.c_str(), ex.what());
-            return true;
-        }
-
-
-        // Set object polygon
-        geometry_msgs::Point32 p1, p2, p3, p4;
-        double d = 0.25;
-
-        p1.x = start_m.pose.position.x + d; p1.y = start_m.pose.position.y - d;
-        p2.x = start_m.pose.position.x + d; p2.y = start_m.pose.position.y + d;
-        p3.x = start_m.pose.position.x - d; p3.y = start_m.pose.position.y - d;
-        p4.x = start_m.pose.position.x - d; p4.y = start_m.pose.position.y + d;
-
-        // Make request
-
-        srvPlan.request.object.points.push_back(p1);
-        srvPlan.request.object.points.push_back(p2);
-        srvPlan.request.object.points.push_back(p3);
-        srvPlan.request.object.points.push_back(p4);
-        srvPlan.request.sleep = ros::Duration(0.1);
+            geometry_msgs::PoseStamped start_m;
+            try {
+                tfl_.waitForTransform(global_frame_, "/map", ros::Time::now(), ros::Duration(1.0));
+                tfl_.transformPose("/map", pose_object_, start_m);
+                start_m.header.frame_id = "/map";
+            } catch ( tf::TransformException& ex ) {
+                ROS_ERROR("%s: %s", node_name_.c_str(), ex.what());
+                return true;
+            }
 
 
-        if ( ros::service::call("/move_base/global_costmap/navigation_layer/clearObjectFromCostmap", srvPlan) ) {
-        } else {
-            ROS_ERROR("(Push) unable to communicate with move_base/global_costmap/navigation_layer/clearObjectFromCostmap");
-            return false;
-        }
-        ROS_INFO("(Push) Object cleared from the costmap \n");
+            // Set object polygon
+            geometry_msgs::Point32 p1, p2, p3, p4;
+            double d = 0.25;
 
-        //get plan
-        nav_msgs::GetPlan getPlanSrv;
+            p1.x = start_m.pose.position.x + d; p1.y = start_m.pose.position.y - d;
+            p2.x = start_m.pose.position.x + d; p2.y = start_m.pose.position.y + d;
+            p3.x = start_m.pose.position.x - d; p3.y = start_m.pose.position.y - d;
+            p4.x = start_m.pose.position.x - d; p4.y = start_m.pose.position.y + d;
 
-        // Getting pushing plan
-        getPlanSrv.request.start =  start_m;
-        getPlanSrv.request.start.header.frame_id = global_frame_;
-        getPlanSrv.request.start.header.stamp = ros::Time::now();
-        getPlanSrv.request.start.pose.orientation = tf::createQuaternionMsgFromYaw(pose_robot_.theta);
-        getPlanSrv.request.goal = push_goal_;
-        getPlanSrv.request.goal.header.frame_id = global_frame_;
-        getPlanSrv.request.tolerance = 0.0;
-        getPlanSrv.request.goal.header.stamp = ros::Time::now();
+            // Make request
 
-        if (ros::service::call("/move_base/GlobalPlanner/make_plan", getPlanSrv)) {
-            if (getPlanSrv.response.plan.poses.empty() ) {
-                ROS_WARN("(Push) Got an empty plan");
+            srvPlan.request.object.points.push_back(p1);
+            srvPlan.request.object.points.push_back(p2);
+            srvPlan.request.object.points.push_back(p3);
+            srvPlan.request.object.points.push_back(p4);
+            srvPlan.request.sleep = ros::Duration(0.1);
+
+
+            if ( ros::service::call("/move_base/global_costmap/navigation_layer/clearObjectFromCostmap", srvPlan) ) {
+            } else {
+                ROS_ERROR("(Push) unable to communicate with move_base/global_costmap/navigation_layer/clearObjectFromCostmap");
                 return false;
             }
-        }
-        else {
-            ROS_ERROR("(Push) unable to communicate with /move_base/GlobalPlanner/make_plan");
-            return false;
-        }
+            ROS_INFO("(Push) Object cleared from the costmap \n");
 
+            //get plan
+            nav_msgs::GetPlan getPlanSrv;
 
-        ROS_INFO("(Push) Got pushing plan \n");
-        pushing_path_.poses.clear();
-        pushing_path_.header.frame_id = global_frame_;
-        for (unsigned int i = 0; i<getPlanSrv.response.plan.poses.size(); ++i) {
+            // Getting pushing plan
+            getPlanSrv.request.start =  start_m;
+            getPlanSrv.request.start.header.frame_id = global_frame_;
+            getPlanSrv.request.start.header.stamp = ros::Time::now();
+            getPlanSrv.request.start.pose.orientation = tf::createQuaternionMsgFromYaw(pose_robot_.theta);
+            getPlanSrv.request.goal = push_goal_;
+            getPlanSrv.request.goal.header.frame_id = global_frame_;
+            getPlanSrv.request.tolerance = 0.0;
+            getPlanSrv.request.goal.header.stamp = ros::Time::now();
 
-            geometry_msgs::PoseStamped p = getPlanSrv.response.plan.poses[i];
-            p.header.frame_id = global_frame_;
-            //                        if (pushing_path_.poses.size() > 1){
-            //                            geometry_msgs::PoseStamped pom = pushing_path_.poses[pushing_path_.poses.size() - 1];
-            //                            pom.pose.position.x = (pom.pose.position.x + p.pose.position.x) / 2;
-            //                            pom.pose.position.y = (pom.pose.position.y + p.pose.position.y) / 2;
-            //                            pushing_path_.poses.push_back(pom);
-            //                        }
-            pushing_path_.poses.push_back(p);
-
-        }
-
-
-        //Get clearance from navigation
-        if(clearance_nav_){
-            corridor_width_ = -1.0;
-
-            squirrel_navigation::get_path_clearance ClearSrv;
-
-            ClearSrv.request.plan = getPlanSrv.response.plan;
-
-
-            if (ros::service::call("/move_base/global_costmap/navigation_layer/getPathClearance", ClearSrv) ) {
-                if ( ClearSrv.response.proximities.empty() ) {
-                    ROS_WARN("(Push) Got an empty clearance");
+            if (ros::service::call("/move_base/GlobalPlanner/make_plan", getPlanSrv)) {
+                if (getPlanSrv.response.plan.poses.empty() ) {
+                    ROS_WARN("(Push) Got an empty plan");
                     return false;
                 }
-            } else {
-                ROS_ERROR("(Push) unable to communicate with /move_base/global_costmap/getPathClearance");
+            }
+            else {
+                ROS_ERROR("(Push) unable to communicate with /move_base/GlobalPlanner/make_plan");
                 return false;
             }
-            ROS_INFO("(Push) Got clearance \n");
 
-            corridor_width_array_ .clear();
-            for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
-                double d = 2 * ClearSrv.response.proximities.at(i);
-                if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
-                if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "large d"<<endl;}
-                corridor_width_array_ .push_back(d);
+
+            ROS_INFO("(Push) Got pushing plan \n");
+            pushing_path_.poses.clear();
+            pushing_path_.header.frame_id = global_frame_;
+            for (unsigned int i = 0; i<getPlanSrv.response.plan.poses.size(); ++i) {
+
+                geometry_msgs::PoseStamped p = getPlanSrv.response.plan.poses[i];
+                p.header.frame_id = global_frame_;
+                //                        if (pushing_path_.poses.size() > 1){
+                //                            geometry_msgs::PoseStamped pom = pushing_path_.poses[pushing_path_.poses.size() - 1];
+                //                            pom.pose.position.x = (pom.pose.position.x + p.pose.position.x) / 2;
+                //                            pom.pose.position.y = (pom.pose.position.y + p.pose.position.y) / 2;
+                //                            pushing_path_.poses.push_back(pom);
+                //                        }
+                pushing_path_.poses.push_back(p);
 
             }
+
+
+            //Get clearance from navigation
+            if(clearance_nav_){
+                corridor_width_ = -1.0;
+
+                squirrel_navigation::get_path_clearance ClearSrv;
+
+                ClearSrv.request.plan = getPlanSrv.response.plan;
+
+
+                if (ros::service::call("/move_base/global_costmap/navigation_layer/getPathClearance", ClearSrv) ) {
+                    if ( ClearSrv.response.proximities.empty() ) {
+                        ROS_WARN("(Push) Got an empty clearance");
+                        return false;
+                    }
+                } else {
+                    ROS_ERROR("(Push) unable to communicate with /move_base/global_costmap/getPathClearance");
+                    return false;
+                }
+                ROS_INFO("(Push) Got clearance \n");
+
+                corridor_width_array_ .clear();
+                for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
+                    double d = 2 * ClearSrv.response.proximities.at(i);
+                    if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
+                    if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "large d"<<endl;}
+                    corridor_width_array_ .push_back(d);
+
+                }
+
+            }
+
+            std_msgs::Bool active_msg_;
+            active_msg_.data = false;
+            active_pub_.publish(active_msg_);
 
         }
-
-        std_msgs::Bool active_msg_;
-        active_msg_.data = false;
-        active_pub_.publish(active_msg_);
-
-    }
-    else{
-        pushing_path_.header.frame_id = global_frame_;
-        int size = 100;
-        for (unsigned int i=0; i<size; ++i) {
-
-            geometry_msgs::PoseStamped p;
-            p.header.frame_id = global_frame_;
-            p.pose.orientation.w = 1.0;
-
-            switch(demo_path){
-
-            case 0:
-            {
-                double x_max = 2.5;
-                p.pose.position.x = x_max/size * i;
-                p.pose.position.y = 0.0;
-            }
-                break;
-
-            case 1:
-            {
-
-                if (i < 35){
-                    double x_max = 1.2;
-                    p.pose.position.x = x_max / 35 * i;
-                    p.pose.position.y = 0.0;
-
-                }
-                else if(i < 70){
-                    double y_max = 1.2;
-                    p.pose.position.x = 1.20;
-                    p.pose.position.y = y_max / 35 * (i - 35);
-                }
-                else{
-                    double x_max = 1.0;
-                    double y_max = 1.0;
-                    p.pose.position.x = 1.2 + x_max / 30 * (i - 70);
-                    p.pose.position.y = 1.2 + y_max / 30 * (i - 70);
-
-                }
-
-            }
-                break;
-
-            case 2:
-            {
-                double x, y;
-                double x_max = 2.5;
-                vec a;
-                x = x_max/size * i;
-                y = 0.8 * sin(6.28 / 2.5 * x );
-                a = rotate2DVector(x, y, -M_PI /4);
-                p.pose.position.x = a(0);
-                p.pose.position.y = a(1);
-
-            }
-                break;
-
-            case 3:
-            {
-                double x, y;
-                double x_max = 3.14;
-                vec a;
-                x = x_max/size * i;
-                y = 0.8 * sin(2 * x );
-                a = rotate2DVector(x, y, -M_PI /4);
-                p.pose.position.x = a(0);
-                p.pose.position.y = a(1);
-
-            }
-                break;
-
-            case 4:
-            {
-
-                double x, y;
-                double x_max = 2.5;
-                vec a;
-                x = x_max/size * i;
-                y = 0.8 * sin( x );
-                a = rotate2DVector(x, y, -M_PI /4);
-                p.pose.position.x = a(0);
-                p.pose.position.y = a(1);
-
-            }
-                break;
-
-            case 5:
-            {
-
-                double x, y;
-                double x_max = 3.5;
-                vec a;
-                x = x_max/size * i;
-                y = 0.8 * sin(x);
-                a = rotate2DVector(x, y, -M_PI /4);
-                p.pose.position.x = a(0);
-                p.pose.position.y = a(1);
-
-
-            }
-                break;
-
-            }
-
-
-            pushing_path_.poses.push_back(p);
-
-        }
-        if(clearance_nav_){
-            corridor_width_ = -1.0;
+        else{
+            pushing_path_.header.frame_id = global_frame_;
+            int size = 100;
             for (unsigned int i=0; i<size; ++i) {
-                double x_max = 5;
-                double x = x_max/size * i;
-                double y = 0.2 * sin(3*x);
-                corridor_width_array_.push_back(2.2*(robot_diameter_ + object_diameter_) + y);
+
+                geometry_msgs::PoseStamped p;
+                p.header.frame_id = global_frame_;
+                p.pose.orientation.w = 1.0;
+
+                switch(demo_path){
+
+                case 0:
+                {
+                    double x_max = 2.5;
+                    p.pose.position.x = x_max/size * i;
+                    p.pose.position.y = 0.0;
+                }
+                    break;
+
+                case 1:
+                {
+
+                    if (i < 35){
+                        double x_max = 1.2;
+                        p.pose.position.x = x_max / 35 * i;
+                        p.pose.position.y = 0.0;
+
+                    }
+                    else if(i < 70){
+                        double y_max = 1.2;
+                        p.pose.position.x = 1.20;
+                        p.pose.position.y = y_max / 35 * (i - 35);
+                    }
+                    else{
+                        double x_max = 1.0;
+                        double y_max = 1.0;
+                        p.pose.position.x = 1.2 + x_max / 30 * (i - 70);
+                        p.pose.position.y = 1.2 + y_max / 30 * (i - 70);
+
+                    }
+
+                }
+                    break;
+
+                case 2:
+                {
+                    double x, y;
+                    double x_max = 2.5;
+                    vec a;
+                    x = x_max/size * i;
+                    y = 0.8 * sin(6.28 / 2.5 * x );
+                    a = rotate2DVector(x, y, -M_PI /4);
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+                }
+                    break;
+
+                case 3:
+                {
+                    double x, y;
+                    double x_max = 3.14;
+                    vec a;
+                    x = x_max/size * i;
+                    y = 0.8 * sin(2 * x );
+                    a = rotate2DVector(x, y, -M_PI /4);
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+                }
+                    break;
+
+                case 4:
+                {
+
+                    double x, y;
+                    double x_max = 3.5;
+                    vec a;
+                    x = x_max/size * i;
+                    y = 0.8 * cos( x ) - 0.8;
+
+                    a = rotate2DVector(x, y, -M_PI /4);
+                    a(0)= x;
+                    a(1)=y;
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+                }
+                    break;
+
+                case 5:
+                {
+
+                    double x, y;
+                    double x_max = 3.5;
+                    vec a;
+                    x = x_max/size * i;
+                    y = 0.8 * sin(x);
+                    a = rotate2DVector(x, y,-M_PI /4);
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+
+                }
+                    break;
+
+                }
+
+
+                pushing_path_.poses.push_back(p);
+
             }
+            if(!clearance_nav_){
+                corridor_width_ = -1.0;
+                for (unsigned int i=0; i<size; ++i) {
+                    double x_max = 5;
+                    double x = x_max/size * i;
+                    double y = 0.2 * sin(3*x);
+                    //double y = 0.1 * sin(6*x);
+                    //if ((i> size/2)&&(i<4*size/5)) y = y + 0.1 * sin(6*x);
+                    corridor_width_array_.push_back(3*(robot_diameter_ + object_diameter_) + y);
+                }
+            }
+
+
         }
 
-
-    }
-
-    ROS_INFO("(Push) Path ready for pushing \n");
-    return true;}
+        ROS_INFO("(Push) Path ready for pushing \n");
+        return true;}
     catch (...){
         ROS_ERROR("(Push) Path getting failed \n");
         return false;
@@ -728,6 +745,7 @@ bool PushAction::startTracking() {
     }
     else{
         while(!firstSet){
+
             cout<<"wait for first set"<<endl;
         }
         return firstSet;

@@ -25,6 +25,8 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS
 filesystem
 )
+find_package(PkgConfig)
+pkg_check_modules(BFL REQUIRED bfl)
 
 catkin_package(
     CATKIN_DEPENDS tf roscpp std_msgs nav_msgs actionlib sensor_msgs geometry_msgs robotino_msgs control_toolbox cmake_modules costmap_2d mongodb_store squirrel_manipulation_msgs squirrel_rgbd_mapping_msgs squirrel_object_perception_msgs
@@ -39,6 +41,9 @@ include_directories(
         ${Boost_INCLUDE_DIRS}
 
 )
+
+include_directories(${BFL_INCLUDE_DIRS})
+link_directories(${BFL_LIBRARY_DIRS})
 
 catkin_add_gtest(${PROJECT_NAME}_manipulation test/manipulation.cpp)
 target_link_libraries(${PROJECT_NAME}_manipulation ${catkin_LIBRARIES} ${GTEST_LIBRARIES} utils  ${ARMADILLO_LIBRARIES})
@@ -76,7 +81,7 @@ add_executable(ardemo src/ARDemo.cpp)
 target_link_libraries(ardemo robotino utils ${catkin_LIBRARIES})
 
 add_executable(push src/pushing/pushing.cpp)
-target_link_libraries(push robotino utils pushlib ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(push robotino utils pushlib ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${BFL_LIBRARIES})
 
 add_executable(smash src/smash.cpp)
 target_link_libraries(smash robotino utils ${catkin_LIBRARIES})

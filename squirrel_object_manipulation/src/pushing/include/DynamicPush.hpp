@@ -12,6 +12,7 @@ private:
 
     bool pub_values_;
 
+
     ros::Publisher velocity_pub_;
     ros::Publisher psi_push_pub_;
     ros::Publisher psi_rel_pub_;
@@ -22,8 +23,14 @@ private:
     ros::Publisher mi_alpha_pub_;
 
     control_toolbox::Pid pid_alpha_;
+    control_toolbox::Pid pid_x_;
+    control_toolbox::Pid pid_y_;
+    control_toolbox::Pid pid_ff_;
     geometry_msgs::Twist cmd;
     double p_alpha_, d_alpha_, i_alpha_, i_alpha_min_, i_alpha_max_;
+    double p_x_, d_x_, i_x_, i_x_min_, i_x_max_;
+    double p_y_, d_y_, i_y_, i_y_min_, i_y_max_;
+    double p_ff_, d_ff_, i_ff_, i_ff_min_, i_ff_max_;
 
     double filt_com;
     double aPOR, mi_alpha, sigma_alpha, aPORp, mi_posterior, sigma_posterior,mi_posterior_pred, sigma_posterior_pred, mi_prior, sigma_prior, sum_alpha;

@@ -65,7 +65,7 @@ private:
 protected:
 
     bool state_machine_;
-    bool approximate_, relaxation_;
+    bool fixed_, relaxation_;
 
     PushState push_state_;
     ros::NodeHandle  private_nh;
@@ -86,6 +86,7 @@ protected:
     double aO2P, aR2O, aR2P, aORP;
     double dO2P, dR2O, dRlOT;
     double zeta;
+    bool  sim_;
 
     string experimentName;
 
@@ -117,6 +118,9 @@ protected:
 
     geometry_msgs::PoseStamped getLookaheadPointDynamic();
     geometry_msgs::PoseStamped getLookaheadPointDynamic(geometry_msgs::PoseStamped pose_object_);
+
+    geometry_msgs::PoseStamped getLookaheadPointFixedDistance();
+    geometry_msgs::PoseStamped getLookaheadPointFixedDistance(geometry_msgs::PoseStamped pose_object_);
 
     geometry_msgs::PoseStamped getLookaheadPointDynamicFlex();
     geometry_msgs::PoseStamped getLookaheadPointDynamicFlex(geometry_msgs::PoseStamped pose_object_);
@@ -165,6 +169,7 @@ public:
     void publishPoint(arma::vec t);
     void publishCorridor();
     void deleteMarkers();
+    void setSim();
 
     void saveData(string path);
     virtual void saveDataChild(string path) = 0;
