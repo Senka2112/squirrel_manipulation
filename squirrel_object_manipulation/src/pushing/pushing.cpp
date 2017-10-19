@@ -20,10 +20,6 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     node_name_ = ros::this_node::getName();
 
     private_nh.param("pose_topic", pose_topic_,std::string("/squirrel_2d_localizer/pose"));
-    private_nh.param("octomap_topic", octomap_topic_,std::string("/squirrel_3d_mapping/update"));
-    private_nh.param("octomap_topic", costmap_topic_,std::string("/costmap/update"));
-    private_nh.param("octomap_topic", laser_layer_topic_,std::string("/move_base/global_costmap/navigation_layer/enable_kinect"));
-    private_nh.param("octomap_topic", kinect_layer_topic_,std::string("/move_base/global_costmap/navigation_layer/enable_laser"));
     private_nh.param("robot_base_frame", robot_base_frame_, std::string("base_link"));
     private_nh.param("push_action_active", action_active_topic_, std::string("/pushing_action"));
     private_nh.param("global_frame", global_frame_, std::string("/map"));
@@ -43,7 +39,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("check_collisions", check_collisions_, false);
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_, false);
-    private_nh.param("sim_", sim_, false);
+    private_nh.param("sim_", sim_, true);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 7);
@@ -63,10 +59,6 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     pushServer.registerPreemptCallback(boost::bind(&PushAction::preemptCB, this));
 
     pose_sub_ = nh.subscribe(pose_topic_, 2, &PushAction::updatePose, this);
-    octomap_pub_ = nh.advertise<std_msgs::Bool>(octomap_topic_, 100);
-    //costmap_pub_ = nh.advertise<std_msgs::Bool>(costmap_topic_, 100);
-    kinect_layer_pub_ = nh.advertise<std_msgs::Bool>(kinect_layer_topic_, 100);
-    laser_layer_pub_ = nh.advertise<std_msgs::Bool>(laser_layer_topic_, 100);
     active_pub_ = nh.advertise<std_msgs::Bool>(action_active_topic_, 100);
     robotino = boost::shared_ptr<RobotinoControl>(new RobotinoControl(nh));
 
@@ -183,18 +175,28 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         }
 
         ros::spinOnce();
-        cout <<"object tracking started"<<endl;
 
-        // start object tracking
-        //turn off costmaps
-        std_msgs::Bool costmap_msg_;
-        costmap_msg_.data = false;
-        //costmap_pub_.publish(costmap_msg_);
-        kinect_layer_pub_.publish(costmap_msg_);
-        laser_layer_pub_.publish(costmap_msg_);
+        dynamic_reconfigure::Config costmap_conf;
+
+        costmap_param.name = "use_kinect";
+        costmap_param.value = false;
+        costmap_conf.bools.push_back(costmap_param);
+
+        costmap_param.name = "use_laser_scan";
+        costmap_param.value = false;
+        costmap_conf.bools.push_back(costmap_param);
+
+        costmap_srv_req.config = costmap_conf;
+
+        if ( ros::service::call("/move_base/global_costmap/ObstaclesLayer/set_parameters", costmap_srv_req, costmap_srv_resp)) {
+        } else {
+            ROS_ERROR("(Push) unable to communicate with /move_base/global_costmap/ObstaclesLayer/set_parameters");
+            abortPush();
+            return ;
+        }
 
         ros::spinOnce();
-        ROS_INFO("(Push) Octomaps, kinect and laser layer off \n");
+        ROS_INFO("(Push) Kinect and laser layer off \n");
 
 
         // move camera for vision
@@ -481,7 +483,7 @@ bool PushAction::getPushPath(){
             getPlanSrv.request.tolerance = 0.0;
             getPlanSrv.request.goal.header.stamp = ros::Time::now();
 
-            if (ros::service::call("/move_base/GlobalPlanner/make_plan", getPlanSrv)) {
+            if (ros::service::call("/move_base/GlobalPlanner/Dijkstra/make_plan", getPlanSrv)) {
                 if (getPlanSrv.response.plan.poses.empty() ) {
                     ROS_WARN("(Push) Got an empty plan");
                     return false;
@@ -533,7 +535,8 @@ bool PushAction::getPushPath(){
 
                 corridor_width_array_ .clear();
                 for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
-                    double d = 2 * ClearSrv.response.proximities.at(i);
+                    //cout<<ClearSrv.response.proximities.at(i)<<endl;
+                    double d = ClearSrv.response.proximities.at(i);
                     if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
                     if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "large d"<<endl;}
                     corridor_width_array_ .push_back(d);
@@ -803,15 +806,31 @@ void PushAction::finishPush(){
     ros::spinOnce();
     ROS_INFO("(Push) Camera in the pose for navigation \n");
 
+      dynamic_reconfigure::Config costmap_conf;
+
+    costmap_param.name = "use_kinect";
+    costmap_param.value = true;
+    costmap_conf.bools.push_back(costmap_param);
+
+    costmap_param.name = "use_laser_scan";
+    costmap_param.value = true;
+    costmap_conf.bools.push_back(costmap_param);
+
+
+    costmap_srv_req.config = costmap_conf;
+
+    if ( ros::service::call("/move_base/global_costmap/ObstaclesLayer/set_parameters", costmap_srv_req, costmap_srv_resp)) {
+    } else {
+        ROS_ERROR("(Push) unable to communicate with /move_base/global_costmap/ObstaclesLayer/set_parameters");
+        abortPush();
+        return ;
+    }
+
     //turn on costmap
-    std_msgs::Bool costmap_msg_;
-    costmap_msg_.data = true;
-    //costmap_pub_.publish(costmap_msg_);
-    kinect_layer_pub_.publish(costmap_msg_);
-    laser_layer_pub_.publish(costmap_msg_);
+
     ros::spinOnce();
 
-    ROS_INFO("(Push) Octomaps on \n");
+    ROS_INFO("(Push) Kinect and laser  on \n");
 
 }
 void PushAction::finishSuccess(){

@@ -11,10 +11,13 @@
 
 #include <tf/transform_listener.h>
 
-#include <squirrel_rgbd_mapping_msgs/GetPushingPlan.h>
 #include <squirrel_navigation_msgs/ClearCostmapRegion.h>
 #include <nav_msgs/GetPlan.h>
 #include <squirrel_navigation_msgs/GetPathClearance.h>
+
+#include <dynamic_reconfigure/DoubleParameter.h>
+#include <dynamic_reconfigure/Reconfigure.h>
+#include <dynamic_reconfigure/Config.h>
 
 #include <squirrel_manipulation_msgs/PushAction.h>
 #include <squirrel_manipulation_msgs/PushActionFeedback.h>
@@ -78,16 +81,20 @@ private:
     //navigation path
     nav_msgs::Path pushing_path_;
     bool getPushPath();
-    std::string octomap_topic_;
-    std::string laser_layer_topic_;
-    std::string kinect_layer_topic_;
-    std::string costmap_topic_;
+    //std::string octomap_topic_;
+    //std::string laser_layer_topic_;
+    //std::string kinect_layer_topic_;
+    //std::string costmap_topic_;
     std::string action_active_topic_;
-    ros::Publisher octomap_pub_;
-    ros::Publisher costmap_pub_;
+    //ros::Publisher octomap_pub_;
+    //ros::Publisher costmap_pub_;
     ros::Publisher active_pub_;
-    ros::Publisher kinect_layer_pub_;
-    ros::Publisher laser_layer_pub_;
+    //ros::Publisher kinect_layer_pub_;
+   // ros::Publisher laser_layer_pub_;
+    dynamic_reconfigure::ReconfigureRequest costmap_srv_req;
+    dynamic_reconfigure::ReconfigureResponse costmap_srv_resp;
+    dynamic_reconfigure::BoolParameter costmap_param;
+
     //robot pose update
     std::string pose_topic_;
     geometry_msgs::Pose2D pose_robot_;
