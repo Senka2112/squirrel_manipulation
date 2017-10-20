@@ -223,7 +223,6 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
             return;
         }
         cout << endl;
-        cout <<"get path"<<endl;
 
         //getting path from navigation
         if(!getPushPath()){
@@ -275,7 +274,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
             abortPush();
         }
         double secs2 = ros::Time::now().toSec();
-        cout<<"push duration "<<secs2 - secs;
+        cout<<"(Push) Push duration "<<secs2 - secs;
 
         cout << endl;
 
@@ -313,8 +312,6 @@ bool PushAction::getFirstObjectPose(){
             }
 
         }
-
-        cout << "pushing - first object pose"<<endl;
 
         return first_pose_;
     }
@@ -537,8 +534,8 @@ bool PushAction::getPushPath(){
                 for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
                     //cout<<ClearSrv.response.proximities.at(i)<<endl;
                     double d = ClearSrv.response.proximities.at(i);
-                    if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "small d"<<endl;}
-                    if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "large d"<<endl;}
+                    if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "(Push) small d"<<endl;}
+                    if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "(Push) large d"<<endl;}
                     corridor_width_array_ .push_back(d);
 
                 }
@@ -806,7 +803,7 @@ void PushAction::finishPush(){
     ros::spinOnce();
     ROS_INFO("(Push) Camera in the pose for navigation \n");
 
-      dynamic_reconfigure::Config costmap_conf;
+    dynamic_reconfigure::Config costmap_conf;
 
     costmap_param.name = "use_kinect";
     costmap_param.value = true;

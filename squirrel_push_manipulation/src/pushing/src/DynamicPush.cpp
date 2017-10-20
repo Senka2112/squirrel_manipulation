@@ -147,7 +147,7 @@ void DynamicPush::updateChild() {
         psi_rel_ = 0;
         filt_com = 0;
         psi_push_ = 1;
-        cout<<"(push dynamic) dR2O >robot_diameter_ n"<<endl;
+        //cout<<"(push dynamic) dR2O >robot_diameter_ n"<<endl;
     }
     //    else if((abs(aPOR - M_PI) > 0.6)&& (cos(aPOR)<0)){
     //        psi_push_  = - psi_push_;
