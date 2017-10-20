@@ -13,7 +13,7 @@
   <run_depend>squirrel_grasping</run_depend>
   <run_depend>squirrel_manipulation_waypoint</run_depend>
   <run_depend>squirrel_moveit_utils</run_depend>
-  <run_depend>squirrel_object_manipulation</run_depend>
+  <run_depend>squirrel_push_manipulation</run_depend>
   <run_depend>uibk_moveit_config</run_depend>
   <run_depend>uibk_moveit_config_sh</run_depend>
   <run_depend>tuw_moveit_config</run_depend>

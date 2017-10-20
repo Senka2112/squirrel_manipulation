@@ -11,7 +11,7 @@ Repository for manipulation related SQUIRREL packages.
 ## Starting object manipulation actions
 
 ```bash 
-$ roslaunch squirrel_object_manipulation  squirrel_object_manipulation.launch
+$ roslaunch squirrel_push_manipulation  squirrel_push_manipulation.launch
 ``` 
 
 Planning over the ros interface
