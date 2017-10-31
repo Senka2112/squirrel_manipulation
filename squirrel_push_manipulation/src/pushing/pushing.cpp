@@ -533,7 +533,7 @@ bool PushAction::getPushPath(){
                 corridor_width_array_ .clear();
                 for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
                     //cout<<ClearSrv.response.proximities.at(i)<<endl;
-                    double d = ClearSrv.response.proximities.at(i);
+                    double d = 2 * ClearSrv.response.proximities.at(i);
                     if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "(Push) small d"<<endl;}
                     if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "(Push) large d"<<endl;}
                     corridor_width_array_ .push_back(d);

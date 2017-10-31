@@ -207,10 +207,10 @@ void PushPlanner::updatePushPlanner(geometry_msgs::Pose2D pose_robot_, geometry_
     this->pose_object_ = pose_object_;
     this->previous_target_ = this->current_target_;
 
-    //if(!fixed_)this->current_target_ = this->getLookaheadPointDynamicFlex();
-    //else if(this->pushpoint_)this->current_target_ = pushing_path_.poses.at(pushing_path_.poses.size());
-    //else
-    this->current_target_ = this->getLookaheadPointFixedDistance();
+    if(!fixed_)this->current_target_ = this->getLookaheadPointDynamicFlex();
+    else if(this->pushpoint_)this->current_target_ = pushing_path_.poses.at(pushing_path_.poses.size());
+    else
+   this->current_target_ = this->getLookaheadPointFixedDistance();
     //this->current_target_ = this->getLookaheadPointDynamic();
 
     //this->current_target_ =  pushing_path_.poses[pushing_path_.poses.size()-1];
