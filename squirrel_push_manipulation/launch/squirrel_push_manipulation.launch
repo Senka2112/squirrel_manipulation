@@ -1,6 +1,8 @@
 <launch>
+  <arg name="sim_" default="false" />
 
   <node pkg="squirrel_push_manipulation" type="push" name="push" cwd="node" required="true" output="screen">
+  <param name="sim_" type="bool" value="$(arg sim_)"/>
    <remap from="/cmd_vel" to="/cmd_pushing" />
   </node>
 

@@ -32,8 +32,8 @@ void PushPlanner::publishMarkerTargetCurrent(geometry_msgs::PoseStamped t_pose) 
     marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
     marker_target_c_.publish(marker);
 }
 
@@ -144,8 +144,8 @@ void PushPlanner::publishCorridor(){
             marker.scale.y = corridor_width_ ;
         }
         else {
-            marker.scale.x = 1.05*corridor_width_array_.at(i);
-            marker.scale.y = 1.05*corridor_width_array_.at(i);
+            marker.scale.x = 1.05*(corridor_width_array_.at(i) - robot_diameter_ );
+            marker.scale.y = 1.05*(corridor_width_array_.at(i) - robot_diameter_ );
         }
         marker.scale.z = 0.05;
         marker.color.a = 0.3;
@@ -169,10 +169,12 @@ void PushPlanner::publishCorridor(){
         marker.pose = pushing_path_.poses[i].pose;
         marker.pose.position.z= -0.05;
 
-        marker.scale.x = 1.05*(corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ > 0 ? corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ : 0);
-        marker.scale.y = 1.05*(corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ > 0 ? corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ : 0);
+        marker.scale.x = 1.05*(corridor_width_array_.at(i) - object_diameter_  - 2*robot_diameter_  > 0 ? corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ : 0);
+        marker.scale.y = 1.05*(corridor_width_array_.at(i) - object_diameter_  - 2*robot_diameter_ > 0 ? corridor_width_array_.at(i) - object_diameter_ - 2*robot_diameter_ : 0);
+
         //marker.scale.x = corridor_object_width_array_.at(i);
         //marker.scale.y = corridor_object_width_array_.at(i);
+        //cout<<"corridor_width_array_.  "<<corridor_width_array_.at(i)<< "object_diameter_ "<<object_diameter_<<" robot_diameter_ "<<robot_diameter_ <<endl;
 
         marker.scale.z = 0.1;
         marker.color.a = 0.3;
@@ -180,7 +182,7 @@ void PushPlanner::publishCorridor(){
         marker.color.g = 1.0;
         marker.color.b = 0.0;
         marker_array_object.markers.push_back(marker);
-         marker_array_object.markers.push_back(marker);
+        marker_array_object.markers.push_back(marker);
 
     }
     vis_object_corridor_.publish(marker_array_object);

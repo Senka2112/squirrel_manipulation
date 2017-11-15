@@ -18,6 +18,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     firstSet (false)
 {
     node_name_ = ros::this_node::getName();
+    ros::NodeHandle private_nh("~");
 
     private_nh.param("pose_topic", pose_topic_,std::string("/squirrel_2d_localizer/pose"));
     private_nh.param("robot_base_frame", robot_base_frame_, std::string("base_link"));
@@ -30,7 +31,7 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
 
     private_nh.param("goal_tolerance", goal_toll_, 0.12);
     private_nh.param("state_machine", state_machine_, false);
-    private_nh.param("object_diameter", object_diameter_, 0.1);
+    private_nh.param("object_diameter",object_diameter_, 0.2);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
 
@@ -39,14 +40,16 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("check_collisions", check_collisions_, false);
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_, false);
-    private_nh.param("sim_", sim_, true);
+    private_nh.param("sim_", sim_, false);
     private_nh.param("save_data", save_data_, false);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
-    private_nh.param("demo_path", demo_path, 7);
+    private_nh.param("demo_path", demo_path, 5);
     private_nh.param("static_paths_", static_paths_,false);
     private_nh.param("fixed_lookahead_", fixed_, false);
     private_nh.param("lookahead", lookahead_, 0.10);
-    private_nh.param("relaxation_", relaxation_, true);
+    private_nh.param("relaxation_", relaxation_, false);
+    private_nh.param("corr_flex_", corr_flex_, false);
+
 
 
 
@@ -530,13 +533,34 @@ bool PushAction::getPushPath(){
                 }
                 ROS_INFO("(Push) Got clearance \n");
 
+
+                double min_prox = 1000.0;
+                for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
+
+                    double d = 2 * ClearSrv.response.proximities.at(i);
+                    if (d < object_diameter_) {d =  object_diameter_; cout << "(Push) small d"<<endl;}
+                    if (d < min_prox ) min_prox = d;
+                    corridor_width_array_ .push_back(d);
+
+                }
+
                 corridor_width_array_ .clear();
                 for (int i = 0; i < ClearSrv.response.proximities.size(); i++ ){
                     //cout<<ClearSrv.response.proximities.at(i)<<endl;
                     double d = 2 * ClearSrv.response.proximities.at(i);
                     if (d < robot_diameter_ + object_diameter_) {d = robot_diameter_ + object_diameter_; cout << "(Push) small d"<<endl;}
                     if (d > 20 * robot_diameter_) {d = 20 * robot_diameter_; cout << "(Push) large d"<<endl;}
-                    corridor_width_array_ .push_back(d);
+                    if (corr_flex_)corridor_width_array_ .push_back(d);
+                    else corridor_width_array_ .push_back(min_prox);
+
+
+                }
+
+                if(!corr_flex_) {
+                    corridor_width_ = min_prox;
+                    if (min_prox < object_diameter_ + robot_diameter_) fixed_ = true;
+                    else if (min_prox < object_diameter_ + robot_diameter_*2) relaxation_ = true;
+                    else  relaxation_ = false;
 
                 }
 
@@ -671,8 +695,8 @@ bool PushAction::getPushPath(){
                         double x = x_max/size * i;
                         double y = 0.2 * sin(3*x);
 
-
-                        corridor_width_array_.push_back(3*(robot_diameter_ + object_diameter_) + y);
+                        corridor_width_array_.push_back(2.5*(robot_diameter_ + object_diameter_) + y);
+                        //corridor_width_array_.push_back(3*(robot_diameter_ + object_diameter_) + y);
 
 
                     }
@@ -905,7 +929,7 @@ void PushAction::arCallback(tf::tfMessage msg) {
 
 int main(int argc, char** argv) {
 
-    ros::init(argc, argv, "base_pushing");
+    ros::init(argc, argv, "push" );
 
     PushAction push(PUSH_NAME);
     ros::spin();

@@ -62,7 +62,7 @@ private:
     bool state_machine_, clearance_nav_, check_collisions_, obstacles_;
     bool nav_, artag_, firstSet, save_data_, sim_, static_paths_, save_corr_, load_corr_;
     double artag_offsetX, artag_offsetY, tag_t_prev;
-    bool fixed_, relaxation_;
+    bool fixed_, relaxation_, corr_flex_;
     geometry_msgs::PoseStamped push_goal_;
     std::string object_id_;
     std::vector<double> corridor_width_array_;
