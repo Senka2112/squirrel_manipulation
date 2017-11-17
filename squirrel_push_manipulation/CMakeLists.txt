@@ -64,3 +64,6 @@ target_link_libraries(push robotino push_utils pushlib ${catkin_LIBRARIES} ${Boo
 add_executable(smash src/smash.cpp)
 target_link_libraries(smash robotino push_utils ${catkin_LIBRARIES})
 
+add_executable(getobj src/retrieveObjectLocations.cpp)
+target_link_libraries(getobj  push_utils ${catkin_LIBRARIES})
+
