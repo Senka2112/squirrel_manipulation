@@ -24,9 +24,12 @@ bool getPos(squirrel_manipulation_msgs::GetObjectPositions::Request  &req,
     ROS_INFO("Requested object positions");
 
 
-    int obj_num = 10;
-    std::string objects[] = {"simple_blue_box","simple_red_box","orange_cylinder","blue_ball","green_cylinder","red_ball","simple_blue_box2","simple_yellow_box","simple_green_box","yellow_cylinder"};
-    double diameters[] = {0.40, 0.20, 0.340, 0.20, 0.20, 0.40, 0.40, 0.240, 0.20, 0.30};
+    int obj_num = 3;
+    //std::string objects[] = {"simple_blue_box","simple_red_box","orange_cylinder","blue_ball","green_cylinder","red_ball","simple_blue_box2","simple_yellow_box","simple_green_box","yellow_cylinder"};
+    //double diameters[] = {0.40, 0.20, 0.340, 0.20, 0.20, 0.40, 0.40, 0.240, 0.20, 0.30};
+    std::string objects[] = {"blue_ball","green_cylinder","simple_blue_box2"};
+    double diameters[] = {0.30, 0.40, 0.45};
+
 
     res.diameters.resize(obj_num);
     res.objectids.resize(obj_num);
