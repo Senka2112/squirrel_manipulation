@@ -31,8 +31,8 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
 
     private_nh.param("goal_tolerance", goal_toll_, 0.12);
     private_nh.param("state_machine", state_machine_, false);
-    private_nh.param("object_diameter",object_diameter_, 0.2);
-    private_nh.param("robot_diameter", robot_diameter_, 0.46);
+    private_nh.param("object_diameter",object_diameter_, 0.15);
+    private_nh.param("robot_diameter", robot_diameter_, 0.55);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
 
 
@@ -41,14 +41,14 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("navigation_", nav_, true);
     private_nh.param("artag_", artag_, false);
     private_nh.param("sim_", sim_, false);
-    private_nh.param("save_data", save_data_, false);
+    private_nh.param("save_data", save_data_, true);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
     private_nh.param("demo_path", demo_path, 5);
     private_nh.param("static_paths_", static_paths_,false);
     private_nh.param("fixed_lookahead_", fixed_, false);
     private_nh.param("lookahead", lookahead_, 0.10);
-    private_nh.param("relaxation_", relaxation_, false);
-    private_nh.param("corr_flex_", corr_flex_, false);
+    private_nh.param("relaxation_", relaxation_, true);
+    private_nh.param("corr_flex_", corr_flex_, true);
 
 
 
@@ -261,7 +261,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         catch (...){
         }
         push_planner_->setExperimentName(object_id_);
-        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/ICRAtests/");
+        if (save_data_) push_planner_->saveData("/home/c7031098/catkin_vienna/data/AUROtests/");
 
         if(obstacles_){
             ROS_INFO("(Push) Obstacle detected");
@@ -449,10 +449,10 @@ bool PushAction::getPushPath(){
             geometry_msgs::Point32 p1, p2, p3, p4;
             double d = 0.25;
 
-            p1.x = start_m.pose.position.x + d; p1.y = start_m.pose.position.y - d;
-            p2.x = start_m.pose.position.x + d; p2.y = start_m.pose.position.y + d;
-            p3.x = start_m.pose.position.x - d; p3.y = start_m.pose.position.y - d;
-            p4.x = start_m.pose.position.x - d; p4.y = start_m.pose.position.y + d;
+            p1.x = start_m.pose.position.x + d; p1.y = start_m.pose.position.y - d -0.10;
+            p2.x = start_m.pose.position.x + d; p2.y = start_m.pose.position.y + d + 0.10;
+            p3.x = start_m.pose.position.x - d; p3.y = start_m.pose.position.y - d-0.10;
+            p4.x = start_m.pose.position.x - d; p4.y = start_m.pose.position.y + d + 0.10;
 
             // Make request
 
