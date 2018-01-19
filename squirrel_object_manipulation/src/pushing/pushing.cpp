@@ -28,13 +28,13 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("push_action_active", action_active_topic_, std::string("/pushing_action"));
     private_nh.param("global_frame", global_frame_, std::string("/map"));
     private_nh.param("controller_frequency", controller_frequency_, 20.00);
-    private_nh.param("tilt_nav", tilt_nav_, 0.75);
+    private_nh.param("tilt_nav", tilt_nav_, -0.3);
     private_nh.param("tilt_perception", tilt_perception_, 1.3);
     private_nh.param("pan_perception", pan_perception_, 0.0);
-    private_nh.param("lookahead", lookahead_, 0.10);
-    private_nh.param("goal_tolerance", goal_toll_, 0.05);
+
+    private_nh.param("goal_tolerance", goal_toll_, 0.12);
     private_nh.param("state_machine", state_machine_, false);
-    private_nh.param("object_diameter", object_diameter_, 0.22);
+    private_nh.param("object_diameter", object_diameter_, 0.20);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
 
@@ -42,18 +42,23 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("clearance_nav", clearance_nav_, false);
     private_nh.param("check_collisions", check_collisions_, false);
     private_nh.param("navigation_", nav_, false);
-    private_nh.param("artag_", artag_,true);
+    private_nh.param("artag_", artag_, true);
     private_nh.param("sim_", sim_, false);
     private_nh.param("save_data", save_data_, true);
     private_nh.param("tracker_tf", tracker_tf_, std::string("/tf1"));
-    private_nh.param("demo_path", demo_path, 5);
+    private_nh.param("demo_path", demo_path, 6);
     private_nh.param("static_paths_", static_paths_,true);
-    private_nh.param("fixed_lookahead_", fixed_, true);
-    private_nh.param("relaxation_", relaxation_, false);
+    private_nh.param("fixed_lookahead_", fixed_, false);
+    private_nh.param("lookahead", lookahead_, 0.10);
+    private_nh.param("relaxation_", relaxation_, true);
 
 
-
-    push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
+    //push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPushOrientVMn());
+    //push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPushOrientVM());
+    push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPushVM());
+    //push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPush());
+    //push_planner_ = boost::shared_ptr<PushPlanner>(new DynamicPushOrient());
+    // push_planner_ = boost::shared_ptr<PushPlanner>(new CentroidAlignment());
 
 
     //set callback for cancel request
@@ -88,6 +93,9 @@ PushAction::~PushAction() {
 
 void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr &goal) {
 
+    ROS_INFO("(Push) Started pushing of %s  \n",  goal->object_id.c_str());
+    cout << endl;
+
     try{
 
         if(!nav_ && !sim_){
@@ -111,7 +119,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
 
 
-        ROS_INFO("(Push) Started pushing of %s  \n",  goal->object_id.c_str());
+        ROS_INFO("(Push) Start Initialization \n");
         cout << endl;
 
         // initilize push
@@ -198,7 +206,6 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
 
         ROS_INFO("(Push) Waiting for the tracker of the %s to start \n", goal->object_id.c_str());
         if(startTracking()){
-
             trackingStart_ = true;
         }
         else{
@@ -241,7 +248,6 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         try{
             //main push loop
             while (nh.ok() &&  push_planner_->push_active_  && runPushPlan_ ){
-
                 push_planner_->updatePushPlanner(pose_robot_, pose_object_);
                 geometry_msgs::Twist cmd = push_planner_->getControlCommand();
                 //cout<<"execute cmd "<<cmd<<endl;
@@ -254,7 +260,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         catch (...){
         }
         push_planner_->setExperimentName(object_id_);
-        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/fixed_lookahead/");
+        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/AUROvideosnew/");
 
         if(obstacles_){
             ROS_INFO("(Push) Obstacle detected");
@@ -546,7 +552,7 @@ bool PushAction::getPushPath(){
         }
         else{
             pushing_path_.header.frame_id = global_frame_;
-            int size = 100;
+            int size = 500;
             for (unsigned int i=0; i<size; ++i) {
 
                 geometry_msgs::PoseStamped p;
@@ -560,6 +566,19 @@ bool PushAction::getPushPath(){
                     double x_max = 2.5;
                     p.pose.position.x = x_max/size * i;
                     p.pose.position.y = 0.0;
+
+                    if(!clearance_nav_){
+                        corridor_width_ = -1.0;
+
+                        //double x_max = 3;
+                        //double x = x_max/size * (x_max/size -i);
+                        //double y = 0.2 * sin(3*x);
+                        //double y = 0.1 * sin(6*x);
+                        //double y = 0.4*x + robot_diameter_*2;
+                        //if ((i> size/2)&&(i<4*size/5)) y = y + 0.1 * sin(6*x);
+                        corridor_width_array_.push_back(4*(robot_diameter_ + 0.2));
+
+                    }
                 }
                     break;
 
@@ -647,28 +666,102 @@ bool PushAction::getPushPath(){
                     p.pose.position.y = a(1);
 
 
+                    if(!clearance_nav_){
+
+                        corridor_width_ = -1.0;
+
+                        double x_max = 5;
+                        double x = x_max/size * i;
+                        double y = 0.2 * sin(3*x);
+
+
+                        corridor_width_array_.push_back(3*(robot_diameter_ + object_diameter_) + y);
+
+
+                    }
+
+
                 }
                     break;
 
+
+                case 6:
+                {
+
+                    double x, y;
+                    double x_max = 3.0;
+                    vec a;
+                    x = x_max/size * i;
+                    y = 0.8 * cos( x ) - 0.8;
+
+                    a = rotate2DVector(x, y, -M_PI /4);
+                    a(0)= x;
+                    a(1)=y;
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+
+                    if(!clearance_nav_){
+                        corridor_width_ = -1.0;
+
+                        double x_max = 3;
+                        double x = x_max/size * (x_max/size -i);
+                        //double y = 0.2 * sin(3*x);
+                        //double y = 0.1 * sin(6*x);
+                        double y = 0.4*x + robot_diameter_*2;
+                        //if ((i> size/2)&&(i<4*size/5)) y = y + 0.1 * sin(6*x);
+                        corridor_width_array_.push_back(2*(robot_diameter_ + 0.2) + y);
+
+                    }
                 }
 
+
+                    break;
+
+
+                case 7:
+                {
+
+                    double x, y;
+                    double x_max = 4;
+                    //double x_max = 1.8;
+                    vec a(2);
+                    x = x_max/size * i;
+                    y = 0.3 * sin(3*x);
+
+
+                    a = rotate2DVector(x, y, -M_PI /4);
+
+                    p.pose.position.x = a(0);
+                    p.pose.position.y = a(1);
+
+
+                    if(!clearance_nav_){
+                        corridor_width_ = -1.0;
+
+                        double x_max = 3;
+                        double x = x_max/size * i;
+                        //double y = 0.2 * sin(3*x);
+
+                        double y = 0.5*x + robot_diameter_*2 + 0.2;
+                        //if ((i> size/2)&&(i<4*size/5)) y = y + 0.1 * sin(6*x);
+                        corridor_width_array_.push_back(y);
+
+                    }
+                }
+
+
+                    break;
+                }
 
                 pushing_path_.poses.push_back(p);
 
-            }
-            if(!clearance_nav_){
-                corridor_width_ = -1.0;
-                for (unsigned int i=0; i<size; ++i) {
-                    double x_max = 5;
-                    double x = x_max/size * i;
-                    double y = 0.2 * sin(3*x);
-                    //double y = 0.1 * sin(6*x);
-                    //if ((i> size/2)&&(i<4*size/5)) y = y + 0.1 * sin(6*x);
-                    corridor_width_array_.push_back(3*(robot_diameter_ + object_diameter_) + y);
-                }
-            }
 
 
+
+
+
+            }
         }
 
         ROS_INFO("(Push) Path ready for pushing \n");
@@ -679,6 +772,7 @@ bool PushAction::getPushPath(){
     }
 
 }
+
 
 void PushAction::abortPush(){
 
@@ -745,6 +839,7 @@ bool PushAction::startTracking() {
     }
     else{
         while(!firstSet){
+
 
             cout<<"wait for first set"<<endl;
         }

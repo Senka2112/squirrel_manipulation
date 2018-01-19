@@ -127,8 +127,8 @@ double rotationDifference(double angle, double theta_robot){
 
     double err_th = angle - theta_robot;
 
-//    if(err_th > 2 * M_PI) err_th = - 2 * M_PI + err_th;
-//    if(err_th < -2 * M_PI) err_th = 2 * M_PI + err_th;
+    //    if(err_th > 2 * M_PI) err_th = - 2 * M_PI + err_th;
+    //    if(err_th < -2 * M_PI) err_th = 2 * M_PI + err_th;
 
 
     if(err_th > M_PI) err_th = - (2 * M_PI - err_th);
@@ -211,6 +211,7 @@ vec pointOnLineWithDistanceFromPointOuter(double x1, double y1, double x2, doubl
 
     return point;
 }
+
 double parallelCurveWidthTrans(double x, double dx, double y, double dy, bool sign, double w){
 
     if (dx == 0) dx = 0.001;
@@ -219,4 +220,140 @@ double parallelCurveWidthTrans(double x, double dx, double y, double dy, bool si
         return x + w * dy / sqrt(dx * dx + dy * dy);
     else
         return x - w * dy / sqrt(dx * dx + dy * dy);
+}
+
+double circR(arma::vec alpha, arma::vec w){
+
+
+    /*References:
+  Statistical analysis of circular data, N.I. Fisher
+   Topics in circular statistics, S.R. Jammalamadaka et al.
+   Biostatistical Analysis, J. H. Zar
+   Circular Statistics Toolbox for Matlab
+*/
+
+    // compute weighted sum of cos and sin of angles
+    double Im = sum(w % sin(alpha));
+    double Re = sum(w % cos(alpha));
+
+    // obtain length
+    return distancePoints(Im, Re, 0, 0)/sum(w);
+}
+
+double circKappa(arma::vec alpha, arma::vec w){
+
+    //get mean
+    double R = circR(alpha, w);
+
+    //aproximate kappa
+    // ref:  Statistical analysis of circular data, Fisher, equation p. 88
+
+    double kappa = 0;
+    if (R < 0.53){
+        kappa = 2.0 * R + pow(R,3.0) + 5.0 * pow(R,5.0) / 6.0;
+    }
+    else if (R >= 0.53 && R < 0.85){
+        kappa = -0.4 + 1.39 * R + 0.43 / (1 - R);
+    }
+    else{
+        kappa = 1.0 / (pow(R,3.0) - 4*pow(R,2.0) + 3.0 * R);
+    }
+
+    int N = alpha.size();
+
+    if (N < 15){
+        if (kappa < 2){
+            kappa = max(kappa - 2 / (N * kappa), 0.0);
+        }
+        else{
+            kappa = pow(N-1,3.0) * kappa / (pow(N,3.0) + N);
+        }
+
+    }
+
+    return kappa;
+}
+
+arma::vec getVMParam(arma::vec alpha, arma::vec w){
+
+    arma::vec param(2);
+    //mu
+    param(0) = circMean(alpha,w);
+
+    //kappa
+    param(1) = circKappa(alpha,w);
+
+    return param;
+}
+
+double circMean(arma::vec alpha, arma::vec w){
+    //compute weighted sum of cos and sin of angles
+    double Im = sum(w % sin(alpha));
+    double Re = sum(w % cos(alpha));
+
+    // obtain mean by
+    double mu = atan2(Im, Re);
+
+    return mu;
+
+}
+
+arma::vec sampleVM(arma::vec param, int N){
+
+    /*References:
+   Statistical analysis of circular data, Fisher, sec. 3.3.6, p. 49
+   Circular Statistics Toolbox for Matlab
+*/
+    double theta = param(0);
+    double kappa = param(1);
+
+    srand ( time(NULL) );
+
+    arma::vec alpha(N);
+    // if kappa is small, treat as uniform distribution
+    if (kappa < 1e-6){
+        for (int i=0; i<N; i++){
+            alpha(i) = 2 * M_PI * ((double) rand() / (RAND_MAX));
+        }
+    }
+    return alpha;
+
+
+    double a = 1 + sqrt(1 + 4 * pow(kappa,2));
+    double b = (a - sqrt(2 * a)) / (2 * kappa);
+    double r = (1 + b * b) / (2 * b);
+
+    double z, f, c, u1, u2, u3;
+    for (int i=0; i<N; i++){
+        while(1){
+
+            u1 = ((double) rand() / (RAND_MAX));
+            u2 = ((double) rand() / (RAND_MAX));
+            u3 = ((double) rand() / (RAND_MAX));
+
+            z = cos(M_PI * u1);
+            f = (1 + r * z) / ( r + z);
+            c = kappa * (r-f);
+
+            if ((u2 < c * (2-c) )|| !(log(c)-log(u2) + 1 -c < 0)) break;
+        }
+
+        alpha(i) = theta +  sign(u3 - 0.5) * acos(f);
+        alpha(i) = atan2(sin(alpha(i)), cos(alpha(i)));
+    }
+
+    return alpha;
+
+}
+
+double getVMval(double alpha, arma::vec param){
+ // get von Mises pdf val
+
+    double theta = param(0);
+    double kappa = param(1);
+
+    double C = 1/(2 * M_PI *  boost::math::cyl_bessel_i(0,kappa));
+    double p = C * exp(kappa * cos(alpha - theta));
+    return p;
+
 }

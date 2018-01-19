@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <armadillo>
+#include <boost/math/special_functions.hpp>
 
 template <typename T>
   std::string NumberToString ( T Number )
@@ -38,6 +39,13 @@ double getAngle(arma::vec v1, arma::vec v2);
 double getGaussianVal(double x, double sigma, double mi);
 
 double parallelCurveWidthTrans(double x, double dx, double y, double dy, bool sign, double w);
+
+double circMean(arma::vec alpha, arma::vec w);
+double circR(arma::vec alpha, arma::vec w);
+double circKappa(arma::vec alpha, arma::vec w);
+arma::vec getVMParam(arma::vec alpha, arma::vec w);
+arma::vec sampleVM(arma::vec param, int N);
+double getVMval(double alpha, arma::vec param);
 
 
 

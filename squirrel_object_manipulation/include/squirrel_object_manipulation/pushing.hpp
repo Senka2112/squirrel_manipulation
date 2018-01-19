@@ -42,6 +42,11 @@
 #include "../src/pushing/include/DipoleField.hpp"
 #include "../src/pushing/include/CentroidAlignment.hpp"
 #include "../src/pushing/include/DynamicPush.hpp"
+#include "../src/pushing/include/DynamicPushOrient.hpp"
+#include "../src/pushing/include/DynamicPushVM.hpp"
+#include "../src/pushing/include/DynamicPushOrientVM.hpp"
+#include "../src/pushing/include/DynamicPushOrientVMn.hpp"
+
 
 #include "mongodb_store/message_store.h"
 

@@ -21,7 +21,6 @@ find_package(catkin REQUIRED COMPONENTS
   squirrel_navigation_msgs
 )
 
-
 find_package(Boost REQUIRED COMPONENTS
 filesystem
 )
@@ -46,7 +45,7 @@ include_directories(${BFL_INCLUDE_DIRS})
 link_directories(${BFL_LIBRARY_DIRS})
 
 catkin_add_gtest(${PROJECT_NAME}_manipulation test/manipulation.cpp)
-target_link_libraries(${PROJECT_NAME}_manipulation ${catkin_LIBRARIES} ${GTEST_LIBRARIES} utils  ${ARMADILLO_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}_manipulation ${catkin_LIBRARIES} ${GTEST_LIBRARIES} utils  ${ARMADILLO_LIBRARIES} armadillo)
 
 add_library(robotino
    src/RobotinoControl.cpp
@@ -66,6 +65,10 @@ add_library(pushlib
    src/pushing/src/DipoleField.cpp
    src/pushing/src/CentroidAlignment.cpp
    src/pushing/src/DynamicPush.cpp
+   src/pushing/src/DynamicPushVM.cpp
+   src/pushing/src/DynamicPushOrient.cpp
+   src/pushing/src/DynamicPushOrientVM.cpp
+   src/pushing/src/DynamicPushOrientVMn.cpp
 )
 
 add_library(utils
@@ -75,7 +78,7 @@ add_library(utils
 )
 
 target_link_libraries(robotino utils)
-target_link_libraries(pushlib utils)
+target_link_libraries(pushlib utils ${ARMADILLO_LIBRARIES} armadillo)
 
 add_executable(ardemo src/ARDemo.cpp)
 target_link_libraries(ardemo robotino utils ${catkin_LIBRARIES})
