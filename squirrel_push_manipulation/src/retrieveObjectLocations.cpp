@@ -31,7 +31,7 @@ bool getPos(squirrel_manipulation_msgs::GetObjectPositions::Request  &req,
     int obj_num = 3;
     //std::string objects[] = {"simple_blue_box","simple_red_box","orange_cylinder","blue_ball","green_cylinder","red_ball","simple_blue_box2","simple_yellow_box","simple_green_box","yellow_cylinder"};
     //double diameters[] = {0.40, 0.20, 0.340, 0.20, 0.20, 0.40, 0.40, 0.240, 0.20, 0.30};
-    std::string objects[] = {"simple_blue_box","green_cylinder","simple_blue_box2"};
+    std::string objects[] = {"blue_ball","green_cylinder","simple_blue_box2"};
     double diameters[] = {0.30, 0.40, 0.45};
 
 
@@ -68,6 +68,7 @@ bool getPos(squirrel_manipulation_msgs::GetObjectPositions::Request  &req,
             pose_object_.pose.position.x = x;
             pose_object_.pose.position.y = y;
             pose_object_.pose.position.y = z;
+            pose_object_.pose.orientation.w = 1.0;
             pose_object_.header.frame_id = "map";
             res.objectposes[line_count] = pose_object_.pose;
             res.diameters[line_count] = diameters[line_count];
