@@ -68,6 +68,7 @@ bool getPos(squirrel_manipulation_msgs::GetObjectPositions::Request  &req,
             pose_object_.pose.position.x = x;
             pose_object_.pose.position.y = y;
             pose_object_.pose.position.y = z;
+            pose_object_.header.frame_id = "map";
             res.objectposes[line_count] = pose_object_.pose;
             res.diameters[line_count] = diameters[line_count];
             res.objectids[line_count] = objects[line_count];
