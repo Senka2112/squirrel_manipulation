@@ -50,7 +50,7 @@ bool getPos(squirrel_manipulation_msgs::GetObjectPositions::Request  &req,
     string path = getexepath();
     //cout<<path<<endl;
 
-    string p = "devel/.private/squirrel_push_manipulation/lib/squirrel_push_manipulation/getobj";
+    string p = "devel/squirrel_push_manipulation/lib/squirrel_push_manipulation/getobj";
     string base = path.substr(0, path.length() - p.length());
     string path_file = base+"src/squirrel_manipulation/data/object_locations.txt";
     //cout<<path_file<<endl;
