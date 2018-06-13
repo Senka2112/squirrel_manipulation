@@ -136,7 +136,7 @@ void DynamicPushOrientVMn::initChild() {
 
     if(sim_) vel_lin_max_ = 0.3;
 
-    data_cont_mat_.set_size(pushing_path_.poses.size(), 11);
+    data_cont_mat_.set_size(pushing_path_.poses.size(), 13);
     param_VM_mat.set_size(1, object_precision_ );
 
     count_all = count_dr;
@@ -288,6 +288,8 @@ void DynamicPushOrientVMn::updateChild() {
     data_cont_mat_(elem_count_, 8) = expected_dir;
     data_cont_mat_(elem_count_, 9) = executed_dir;
     data_cont_mat_(elem_count_, 10) = gamma;
+     data_cont_mat_(elem_count_, 11) = theta_v;
+      data_cont_mat_(elem_count_, 12) = v_fb;
 
 
     if (elem_count_ == data_cont_mat_.n_rows - 1) data_cont_mat_.resize(data_cont_mat_.n_rows + pushing_path_.poses.size(), data_cont_mat_.n_cols);
@@ -345,7 +347,7 @@ geometry_msgs::Twist DynamicPushOrientVMn::getVelocities(){
         //        aPOR = aPOR -filt_com*K1*mi_gamma -  filt_com*K2*gamma;
 
         //double theta_v = getVectorAngle(sign(cos(aPOR)) * cos(aPOR),sign(cos(aPOR)) * sin(aPOR));
-        double theta_v = getVectorAngle(cos(aPOR), sin(aPOR));
+        theta_v = getVectorAngle(cos(aPOR), sin(aPOR));
 
         //theta_v = aPOR;
         //cout<<"t "<<theta_v<<endl;
@@ -364,7 +366,7 @@ geometry_msgs::Twist DynamicPushOrientVMn::getVelocities(){
         theta_v = getVectorAngle(vx, vy);
         double K1 = 0.05; double K2 = 0.1;
         //theta_v = theta_v - filt_com*K1*mi_gamma -  filt_com*K2*gamma;
-        double v_fb = pid_ff_.computeCommand(gamma, ros::Duration(time_step_));
+         v_fb = pid_ff_.computeCommand(gamma, ros::Duration(time_step_));
         theta_v = theta_v - v_fb;
         //cout<<"v "<<v_fb<< "th "<<theta_v<< "gam "<<gamma<<endl;
 
@@ -474,51 +476,51 @@ geometry_msgs::Twist DynamicPushOrientVMn::getVelocities(){
 
     // centroid alignment
 
-        double sigma_gc = 0.2;
-        double sigma_c = 0.4;
+//        double sigma_gc = 0.2;
+//        double sigma_c = 0.4;
 
-        //initialize value
-        geometry_msgs::Twist cmd = getNullTwist();
+//        //initialize value
+//        geometry_msgs::Twist cmd = getNullTwist();
 
-        // error object-target
-        vec object_error_(2), object_goal_(2);
-        object_error_(0) = current_target_.pose.position.x - pose_object_.pose.position.x;
-        object_error_(1) = current_target_.pose.position.y - pose_object_.pose.position.y;
+//        // error object-target
+//        vec object_error_(2), object_goal_(2);
+//        object_error_(0) = current_target_.pose.position.x - pose_object_.pose.position.x;
+//        object_error_(1) = current_target_.pose.position.y - pose_object_.pose.position.y;
 
-        object_goal_(0) = goal_.pose.position.x - pose_object_.pose.position.x;
-        object_goal_(1) = goal_.pose.position.y - pose_object_.pose.position.y;
+//        object_goal_(0) = goal_.pose.position.x - pose_object_.pose.position.x;
+//        object_goal_(1) = goal_.pose.position.y - pose_object_.pose.position.y;
 
-        if(getNorm(object_goal_)> 0.2){
-             object_error_(0) = 0.2 *  object_error_(0) / (getNorm(object_error_));
-             object_error_(1) = 0.2 *  object_error_(0) / (getNorm(object_error_));
-        }
+//        if(getNorm(object_goal_)> 0.2){
+//             object_error_(0) = 0.2 *  object_error_(0) / (getNorm(object_error_));
+//             object_error_(1) = 0.2 *  object_error_(0) / (getNorm(object_error_));
+//        }
 
-        //robot displacement from line object-target
-        vec displacement_point_ = closestPointOnLine(pose_robot_.x, pose_robot_.y, pose_object_.pose.position.x, pose_object_.pose.position.y, current_target_.pose.position.x, current_target_.pose.position.y);
+//        //robot displacement from line object-target
+//        vec displacement_point_ = closestPointOnLine(pose_robot_.x, pose_robot_.y, pose_object_.pose.position.x, pose_object_.pose.position.y, current_target_.pose.position.x, current_target_.pose.position.y);
 
-        vec robot_displacement_(2);
-        robot_displacement_(0) = displacement_point_(0) - pose_robot_.x;
-        robot_displacement_(1) = displacement_point_(1) - pose_robot_.y;
+//        vec robot_displacement_(2);
+//        robot_displacement_(0) = displacement_point_(0) - pose_robot_.x;
+//        robot_displacement_(1) = displacement_point_(1) - pose_robot_.y;
 
-        // robot_error_vector = vector sum
-        vec u_(2);
-        u_(0) = sigma_c * robot_displacement_(0) +  sigma_gc * object_error_(0);
-        u_(1) = sigma_c * robot_displacement_(1) +  sigma_gc * object_error_(1);
+//        // robot_error_vector = vector sum
+//        vec u_(2);
+//        u_(0) = sigma_c * robot_displacement_(0) +  sigma_gc * object_error_(0);
+//        u_(1) = sigma_c * robot_displacement_(1) +  sigma_gc * object_error_(1);
 
-        // transform to robot frame
-        vec u_R_ = rotate2DVector(u_, -pose_robot_.theta);
+//        // transform to robot frame
+//        vec u_R_ = rotate2DVector(u_, -pose_robot_.theta);
 
-        cmd.linear.x = u_R_(0);
-        cmd.linear.y = u_R_(1);
+//        cmd.linear.x = u_R_(0);
+//        cmd.linear.y = u_R_(1);
 
 
-        double orient_error = rotationDifference(aR2O,pose_robot_.theta);
-        if(orient_error > 0.3){
-            cmd.linear.x = 0;
-            cmd.linear.y = 0;
+//        double orient_error = rotationDifference(aR2O,pose_robot_.theta);
+//        if(orient_error > 0.3){
+//            cmd.linear.x = 0;
+//            cmd.linear.y = 0;
 
-        }
-        cmd.angular.z = pid_alpha_.computeCommand(orient_error, ros::Duration(time_step_));
+//        }
+//        cmd.angular.z = pid_alpha_.computeCommand(orient_error, ros::Duration(time_step_));
 
 
     //-----------------------------------------------------------------------------------------------

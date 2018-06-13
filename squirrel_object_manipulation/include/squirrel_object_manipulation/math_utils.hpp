@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <armadillo>
 #include <boost/math/special_functions.hpp>
+#include <map>
 
 template <typename T>
   std::string NumberToString ( T Number )
@@ -46,6 +47,8 @@ double circKappa(arma::vec alpha, arma::vec w);
 arma::vec getVMParam(arma::vec alpha, arma::vec w);
 arma::vec sampleVM(arma::vec param, int N);
 double getVMval(double alpha, arma::vec param);
+
+template <typename T> static float ShannonEntropy(T data[],int elements);
 
 
 

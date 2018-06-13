@@ -32,9 +32,9 @@ PushAction::PushAction(const std::string std_PushServerActionName) :
     private_nh.param("tilt_perception", tilt_perception_, 1.3);
     private_nh.param("pan_perception", pan_perception_, 0.0);
 
-    private_nh.param("goal_tolerance", goal_toll_, 0.12);
+    private_nh.param("goal_tolerance", goal_toll_, 0.08);
     private_nh.param("state_machine", state_machine_, false);
-    private_nh.param("object_diameter", object_diameter_, 0.20);
+    private_nh.param("object_diameter", object_diameter_, 0.25);
     private_nh.param("robot_diameter", robot_diameter_, 0.46);
     private_nh.param("corridor_width", corridor_width_ , 1.6);
 
@@ -260,7 +260,7 @@ void PushAction::executePush(const squirrel_manipulation_msgs::PushGoalConstPtr 
         catch (...){
         }
         push_planner_->setExperimentName(object_id_);
-        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/AUROvideosnew/");
+        if (save_data_) push_planner_->saveData("/home/c7031098/push_ws/data/AUROtestsNEW/");
 
         if(obstacles_){
             ROS_INFO("(Push) Obstacle detected");
@@ -614,6 +614,7 @@ bool PushAction::getPushPath(){
                     vec a;
                     x = x_max/size * i;
                     y = 0.8 * sin(6.28 / 2.5 * x );
+                    y = 0.3 * sin(2 * x );
                     a = rotate2DVector(x, y, -M_PI /4);
                     p.pose.position.x = a(0);
                     p.pose.position.y = a(1);
@@ -689,7 +690,7 @@ bool PushAction::getPushPath(){
                 {
 
                     double x, y;
-                    double x_max = 3.0;
+                    double x_max = 3.5;
                     vec a;
                     x = x_max/size * i;
                     y = 0.8 * cos( x ) - 0.8;
@@ -724,16 +725,24 @@ bool PushAction::getPushPath(){
 
                     double x, y;
                     double x_max = 4;
-                    //double x_max = 1.8;
+                   // double x_max = 1.8; //iros
+                    // double x_max = 2.5; //iros
                     vec a(2);
                     x = x_max/size * i;
                     y = 0.3 * sin(3*x);
+//                    y = 0.3 * sin(M_PI * x); //iros
+//                    y=0;
+
 
 
                     a = rotate2DVector(x, y, -M_PI /4);
 
                     p.pose.position.x = a(0);
                     p.pose.position.y = a(1);
+
+                    p.pose.position.x = x;
+                    p.pose.position.y = y;
+
 
 
                     if(!clearance_nav_){

@@ -46,6 +46,8 @@ private:
     arma::vec alpha_vec, gamma_vec, param_VM, param_VM_mu, param_VM_K;
     arma::vec psi_push_vec, alpha_g_vec, orient_g_vec, w_vec;
 
+    double theta_v, v_fb;
+
     arma::vec like_w_;
 
     int object_precision_;
